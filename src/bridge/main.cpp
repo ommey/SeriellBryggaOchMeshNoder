@@ -8,6 +8,9 @@
 #define   MESH_PORT       5555
 
 painlessMesh mesh; //variant på painlessMesh som kan skicka meddelanden till specifika noder
+class Comms;
+class Scene;
+
 
 class Tile{
     public: 
@@ -26,6 +29,7 @@ class Tile{
 };
 
 struct MapUpdate{
+    MapUpdate() = default;
     MapUpdate(int row, int column, Tile::TileType type): row(row), column(column), type(type) {}
     int row;
     int column;
@@ -81,6 +85,7 @@ struct MapUpdate{
 
 class Comms {
 private:
+    Scene* scene;
     painlessMesh mesh;
     QueueHandle_t serialOutPutQueue;
     QueueHandle_t meshOutputQueue;
@@ -133,11 +138,10 @@ private:
                     else{
                         comms->serialOutPut("Parsed JSON, " + String(amntjson));
                         amntjson++;
-                        switch (stringToCommand(doc.["Command"]))
+                        switch (comms->stringToCommand(doc["Command"]))
                         {
-                        case NewMap:
-                            MapUpdate mapUpdate 
-                            
+                        case commandsToReceive::NewMap:
+                            comms->scene->createNewMap(doc["Rows"], doc["Columns"]);
                             break;
                         
                         default:
@@ -180,7 +184,7 @@ public:
     }
 
 
-    Comms() : serialOutPutQueue(xQueueCreate(100, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(100, sizeof(char) * 256)) {
+    Comms(Scene* scene) : scene(scene), serialOutPutQueue(xQueueCreate(100, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(100, sizeof(char) * 256)) {
         Serial.begin(115200);
         Serial.setTimeout(50);
         mesh.init(MESH_SSID, MESH_PASSWORD, MESH_PORT);
@@ -262,10 +266,28 @@ public:
 
 class Scene {
     private:
-        Map* map;
-        Comms* comms;
+        Map* map = nullptr;
+        Comms* comms = nullptr;
         QueueHandle_t sceneUpdateQueue;
-        static void InternSceneUpdateTask(void* pvParameters)
+        
+        static void mapHandlerTask(void* p)
+        {
+            Scene* scene = static_cast<Scene*>(p);
+            MapUpdate mapUpdate;
+            while(scene->map)
+            {
+                if (xQueueReceive(scene->sceneUpdateQueue, &mapUpdate, 10) == pdPASS)
+                {
+                    scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
+                    scene->comms->serialOutPut("tile updated");
+                }
+                scene->comms->serialOutPut("Handling map...");
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+            }
+        }
+
+
+        /*static void InternSceneUpdateTask(void* pvParameters)
         {
             Scene* scene = static_cast<Scene*>(pvParameters);
             while (1)
@@ -273,7 +295,6 @@ class Scene {
                 scene->comms->serialOutPut("InternSceneUpdateTask");
                 vTaskDelay(1000 / portTICK_PERIOD_MS);
             }
-            
         }
         static void ExternSceneUpdateTask(void* pvParameters)
         {
@@ -287,27 +308,62 @@ class Scene {
                 }
             }
         
-        }
+        }*/
     public:
-        Scene(Map* map, Comms* comms): map(map), comms(comms), sceneUpdateQueue(xQueueCreate(100, sizeof(MapUpdate)))
+        Scene(): sceneUpdateQueue(xQueueCreate(100, sizeof(MapUpdate))){}
+
+        void registerComms(Comms* comms)
         {
-            
+            this->comms = comms;
         }
-        void start()
+
+        void sceneToComms(const String& msg)
         {
-            if (xTaskCreate(ExternSceneUpdateTask, "ExternSceneUpdateTask", 5000, this, 1, NULL) != pdPASS) {
-                Serial.println("Failed to create ExternSceneUpdateTask");
+            if (comms != nullptr)
+            {
+            comms->serialOutPut(msg);
             }
+            else
+            {
+                Serial.println("No comms to send to");
+            }
+        }
+        
+        void createNewMap(int rows, int columns)
+        {
+            if (map != nullptr)
+            {
+                delete map;
+            }
+            map = new Map(rows, columns);
+            sceneToComms("Created new map" + String(rows) + "x" + String(columns));
         }
         void enqueueMapUpdate(int row, int column, Tile::TileType type)
         {
+            if (!map)
+            {
+                sceneToComms("No map to update");
+                return;
+            }
             MapUpdate mapUpdate = {row, column, type};
             if (xQueueSend(sceneUpdateQueue, &mapUpdate, 10) != pdPASS) {
                 Serial.println("Failed to add to map queue");
             }
         }
+
+
+        void start()
+        {
+            if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 5000, this, 1, NULL) != pdPASS) {
+                Serial.println("Failed to create ExternSceneUpdateTask");
+            }
+        }
         ~Scene()
         {
+            if (map)
+            {
+                delete map;
+            }
             vQueueDelete(sceneUpdateQueue);
         }
 };
@@ -319,7 +375,8 @@ class Scene {
 // Main application
 void setup() {
     delay(1000);
-    static Comms comms;
+    static Scene scene;
+    static Comms comms(&scene);
     comms.start();
     comms.serialOutPut("Just started");
     comms.meshOutPut("Just started");
