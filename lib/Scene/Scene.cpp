@@ -106,9 +106,7 @@ void Scene::mapHandlerTask(void *p)
         // Perform periodic handling logic
         if (scene->map)
         {
-            
-            scene->updateTile(3, 4, Tile::Fire);
-            
+                        
             /*for(int r = 0; r < scene->map->Rows; r++)
             {
                 for(int c = 0; c < scene->map->Columns; c++)
