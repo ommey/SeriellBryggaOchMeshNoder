@@ -11,7 +11,7 @@ void setup() {
     static Comms comms(&scene);
     scene.registerSerialQueue(&comms.serialOutPutQueue);
     comms.start();
-    //comms.serialOutPut("Just started");
+    comms.serialOutPut("Just started");
     //comms.meshOutPut("Just started");
 
 }

@@ -85,7 +85,7 @@ void Scene::tileUpdateTask(void *p)
             if (scene->map)
             {
                 scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
-                //scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+            //    scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
             }
             else
             {
@@ -105,20 +105,8 @@ void Scene::mapHandlerTask(void *p)
     {
         // Perform periodic handling logic
         if (scene->map)
-        {
-                        
-            /*for(int r = 0; r < scene->map->Rows; r++)
-            {
-                for(int c = 0; c < scene->map->Columns; c++)
-                {
-                    if (scene->map->tiles[r][c].type == Tile::Fire)
-                    {
-                    //scene->sceneToComms("Fire at (" + String(r) + ", " + String(c) + ")");
-
-                    
-                    }
-                    }
-                }*/
+        {              
+         scene->internMapUpdate(); 
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay for periodic processing
         }
@@ -135,6 +123,63 @@ void Scene::mapHandlerTask(void *p)
     //för klienten
     }
 
+    void Scene::internMapUpdate()
+    {
+        map->incrementFireSpread();
+          for(int r = 0; r < map->Rows; r++)
+            {
+                for(int c = 0; c < map->Columns; c++)
+                {
+                    switch (map->tiles[r][c].type)
+                    {
+                    case Tile::TileType::Path:
+                        
+                        break;
+                    case Tile::TileType::Wall:
+                        
+                        break;
+                    case Tile::TileType::Smokey:
+                        
+                        break;
+                    case Tile::TileType::Fire:
+                        if (map->fireSpreadMap[r][c] > 5)
+                        {
+                            map->fireSpreadMap[r][c] = 0;
+                            for (Tile tile : map->getAdjacentTiles(r, c))
+                            {
+                                if (tile.type != Tile::TileType::Fire)
+                                {
+                                
+                                updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
+                                vTaskDelay(20 / portTICK_PERIOD_MS);
+                                }
+                                
+                            }
+                        }
+                        
+                        /*for(Tile tile : map->getAdjacentTiles(r, c))
+                        {
+                            if (map->fireSpreadMap[r][c] > 5)
+                            {
+                                updateTile
+                            }
+                        }*/
+                        break;
+                    case Tile::TileType::HasVictim:
+                        
+                        break;
+                    case Tile::TileType::HasHazard:
+                        
+                        break;
+                    case Tile::TileType::FireFighter:
+                        
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+    }
 
 void Scene::openTileUpdates()
 {

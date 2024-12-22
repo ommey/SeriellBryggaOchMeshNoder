@@ -74,6 +74,7 @@ void Comms::serialWriteTask(void *pvParameters)
                 String msg = Serial.readStringUntil('\n');
                 if (msg.startsWith("{") && msg.endsWith("}"))
                 {
+                    comms->serialOutPut(msg);
                     StaticJsonDocument<256> doc;
                     DeserializationError error = deserializeJson(doc, msg);
                     if (error) {
@@ -92,6 +93,7 @@ void Comms::serialWriteTask(void *pvParameters)
                             break;
                         case commandsToReceive::Tile:
                             comms->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
+                            comms->serialOutPut("Tile update received");
                             break;
                         case commandsToReceive::Go:
                             comms->scene->start(); // starta hantering av karta

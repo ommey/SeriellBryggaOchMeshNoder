@@ -39,6 +39,8 @@ class Scene {
 
         void updateTile(int row, int column, Tile::TileType type);
 
+        void internMapUpdate();
+
         void start();
 };
 
