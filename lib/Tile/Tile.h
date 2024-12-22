@@ -19,6 +19,7 @@ class Tile{
         
         Tile(): type(Path) {}
         static TileType stringToType(const String &type);
+        static String typeToString(const TileType type);
 };
 
 #endif

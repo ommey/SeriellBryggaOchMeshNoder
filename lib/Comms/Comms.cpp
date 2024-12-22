@@ -1,13 +1,14 @@
 #include "Comms.h"
 
-Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(200, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(200, sizeof(char) * 256)) {
+Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(200, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(200, sizeof(char) * 256)) 
+{
     Serial.begin(115200);
     Serial.setTimeout(50);
     mesh.init(MESH_SSID, MESH_PASSWORD, MESH_PORT);
     mesh.onReceive([this](uint32_t from, String& msg) {
         this->serialOutPut(msg);
     });
-    }
+}
     
 void Comms::meshUpdate(void *pvParameters)
 {
@@ -49,7 +50,23 @@ void Comms::serialWriteTask(void *pvParameters)
 
     void Comms::serialReadTask(void *pvParameters)
  {
-        Comms* comms = static_cast<Comms*>(pvParameters);
+    Comms* comms = static_cast<Comms*>(pvParameters);
+    struct CommandToGui
+    {
+        String Command;
+        String ToJson()
+        {
+            StaticJsonDocument<256> doc;
+            doc["Command"] = Command;
+            String json;
+            serializeJson(doc, json);
+            return json;
+        }
+
+    };
+
+
+    
         int amntjson = 0;
         int amntString = 0;
         while (1) {
@@ -65,20 +82,24 @@ void Comms::serialWriteTask(void *pvParameters)
                     else{
                         //comms->serialOutPut("Parsed JSON, " + String(amntjson) + ", " + msg);
                         //amntjson++;
+                        CommandToGui commandToGui;
                         switch (comms->stringToCommand(doc["Command"]))
                         {
                         case commandsToReceive::NewMap:
+                            comms->scene->reset();
                             comms->scene->createNewMap(doc["Rows"], doc["Columns"]);
+                            comms->scene->openTileUpdates();
                             break;
                         case commandsToReceive::Tile:
                             comms->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
                             break;
                         case commandsToReceive::Go:
-                            comms->scene->start();
+                            comms->scene->start(); // starta hantering av karta
                             break;
                         case commandsToReceive::Reset:
                             comms->scene->reset();
-                            amntjson = 0;
+                            commandToGui.Command = "Reset";
+                            comms->serialOutPut(commandToGui.ToJson());
                             break;
                         default:
                             break;
