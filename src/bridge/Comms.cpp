@@ -50,159 +50,171 @@ while (1)
 }
 
 void Comms::serialWriteTask(void *pvParameters)
-    {
-        Comms* comms = static_cast<Comms*>(pvParameters);
-        char msgChar[256];
-        while (1) {
-            if (xQueueReceive(comms->serialOutPutQueue, &msgChar, 10) == pdPASS) {
-                if (msgChar != "") {
-                    try {
-                        Serial.println(msgChar);
-                    }
-                    catch (...) {
-                        
-                    }
-                }
-            }
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-        }
-    }
-
-    void Comms::serialReadTask(void *pvParameters)
- {
+{
     Comms* comms = static_cast<Comms*>(pvParameters);
-    struct CommandToGui
+    char msgChar[256];
+    while (1) 
     {
-        String Command;
-        String ToJson()
+        if (xQueueReceive(comms->serialOutPutQueue, &msgChar, 10) == pdPASS) 
         {
-            StaticJsonDocument<256> doc;
-            doc["Command"] = Command;
-            String json;
-            serializeJson(doc, json);
-            return json;
-        }
-
-    };
-        int amntjson = 0;
-        int amntString = 0;
-        while (1) {
-            if (Serial.available() > 0) {
-                String msg = Serial.readStringUntil('\n');
-                if (msg.startsWith("{") && msg.endsWith("}"))
-                {
-                    comms->enqueueSerialOutput(msg);
-                    StaticJsonDocument<256> doc;
-                    DeserializationError error = deserializeJson(doc, msg);
-                    if (error) {
-                        comms->enqueueSerialOutput("Failed to parse JSON");
-                    }
-                    else{
-                        //comms->enqueueSerialOutput("Parsed JSON, " + String(amntjson) + ", " + msg);
-                        //amntjson++;
-                        CommandToGui commandToGui;
-                        switch (comms->stringToCommand(doc["Command"]))
-                        {
-                        case commandsToReceive::NewMap:
-                            comms->scene->reset();
-                            comms->scene->createNewMap(doc["Rows"], doc["Columns"]);
-                            comms->scene->openTileUpdates();
-                            break;
-                        case commandsToReceive::Tile:
-                            comms->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
-                            break;
-                        case commandsToReceive::Go:
-                            comms->scene->start(); // starta hantering av karta
-                            break;
-                        case commandsToReceive::Reset:
-                            comms->scene->reset();
-                            commandToGui.Command = "Reset";
-                            comms->enqueueSerialOutput(commandToGui.ToJson());
-                            break;
-                        default:
-                            break;
-                        }
-
-                    }
+            if (msgChar != "") {
+                try {
+                    Serial.println(msgChar);
                 }
-                else 
-                {
-                    comms->enqueueSerialOutput("Bradcasting :" + msg);
-                    comms->enqueueMeshOutput(msg);
+                catch (...) {
+                    
                 }
-
-
-                //comms->enqueueSerialOutput(msg);
-                //comms->enqueueMeshOutput(msg);
             }
-            vTaskDelay(30 / portTICK_PERIOD_MS);
         }
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
+}
 
-    Comms::commandsToReceive Comms::stringToCommand(const String &command)
+void Comms::serialReadTask(void *pvParameters)
+{
+Comms* comms = static_cast<Comms*>(pvParameters);
+struct CommandToGui
+{
+    String Command;
+    String ToJson()
     {
-        if (command == "NewMap"){
-            return NewMap;
-        }
-        else if (command == "Tile"){
-            return Tile;
-        }
-        else if(command == "Reset"){
-            return Reset;
-        }
-        else if (command == "Go"){
-            return Go;
-        }
-        else{
-            return Reset;
-        }
+        StaticJsonDocument<256> doc;
+        doc["Command"] = Command;
+        String json;
+        serializeJson(doc, json);
+        return json;
     }
+};
+    int amntjson = 0;
+    int amntString = 0;
+    while (1) {
+        if (Serial.available() > 0) {
+            String msg = Serial.readStringUntil('\n');
+            if (msg.startsWith("{") && msg.endsWith("}"))
+            {
+                comms->enqueueSerialOutput(msg);
+                StaticJsonDocument<256> doc;
+                DeserializationError error = deserializeJson(doc, msg);
+                if (error) {
+                    comms->enqueueSerialOutput("Failed to parse JSON");
+                }
+                else{
+                    //comms->enqueueSerialOutput("Parsed JSON, " + String(amntjson) + ", " + msg);
+                    //amntjson++;
+                    CommandToGui commandToGui;
+                    switch (comms->stringToCommand(doc["Command"]))
+                    {
+                    case commandsToReceive::NewMap:
+                        comms->scene->reset();
+                        comms->scene->createNewMap(doc["Rows"], doc["Columns"]);
+                        comms->scene->openTileUpdates();
+                        //infomera noder i mesh om ny karta
+                        comms->enqueueMeshOutput(msg);
+                        break;
+                    case commandsToReceive::Tile:
+                        comms->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
+                        //infomera noder i mesh om ny tile
+                        comms->enqueueMeshOutput(msg);
+                        break;
+                    case commandsToReceive::Go:
+                        comms->scene->start(); // starta hantering av karta
+                        // todo säg till brandmän att de är ok komma in
+                        comms->enqueueMeshOutput(msg);
+                        break;
+                    case commandsToReceive::Reset:
+                        comms->scene->reset();
+                        commandToGui.Command = "Reset";
+                        comms->enqueueSerialOutput(commandToGui.ToJson());
+                        // todo be branmän att starta om
+                        comms->enqueueMeshOutput(msg);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+            else 
+            {
+                comms->enqueueSerialOutput("Bradcasting :" + msg);
+                comms->enqueueMeshOutput(msg);
+            }
 
-    QueueHandle_t Comms::getSerialOutPutQueue()
-   { 
+
+            //comms->enqueueSerialOutput(msg);
+            //comms->enqueueMeshOutput(msg);
+        }
+        vTaskDelay(30 / portTICK_PERIOD_MS);
+    }
+}
+
+Comms::commandsToReceive Comms::stringToCommand(const String &command)
+{
+    if (command == "NewMap"){
+        return NewMap;
+    }
+    else if (command == "Tile"){
+        return Tile;
+    }
+    else if(command == "Reset"){
+        return Reset;
+    }
+    else if (command == "Go"){
+        return Go;
+    }
+    else{
+        return Reset;
+    }
+}
+
+QueueHandle_t Comms::getSerialOutPutQueue()
+{ 
     return serialOutPutQueue; 
-   }
+}
 
-    Comms::~Comms()
-    {
-        vQueueDelete(serialOutPutQueue);
-        vQueueDelete(meshOutputQueue);
+Comms::~Comms()
+{
+    vQueueDelete(serialOutPutQueue);
+    vQueueDelete(meshOutputQueue);
+}
+
+void Comms::start()
+{
+    if (xTaskCreate(meshUpdate, "meshUpdate", 5000, this, 1, NULL) != pdPASS) {
+        Serial.println("Failed to create meshUpdate task");
     }
-
-    void Comms::start()
-    {
-        if (xTaskCreate(meshUpdate, "meshUpdate", 5000, this, 1, NULL) != pdPASS) {
-            Serial.println("Failed to create meshUpdate task");
-        }
-        if (xTaskCreate(serialWriteTask, "serialWriteTask", 5000, this, 1, NULL) != pdPASS) {
-            Serial.println("Failed to create serialWriteTask");
-        }
-        if (xTaskCreate(serialReadTask, "serialReadTask", 5000, this, 1, NULL) != pdPASS) {
-            Serial.println("Failed to create serialReadTask");
-        }
-        if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 5000, this, 1, NULL) != pdPASS) {
-            Serial.println("Failed to create meshBroadCastTask");
-        }
+    if (xTaskCreate(serialWriteTask, "serialWriteTask", 5000, this, 1, NULL) != pdPASS) {
+        Serial.println("Failed to create serialWriteTask");
     }
-
-    void Comms::enqueueMeshOutput(const String &msg)
-    {
-        if (msg != "") {
-            char msgChar[256];
-            msg.toCharArray(msgChar, sizeof(msgChar));
-            if (xQueueSend(meshOutputQueue, &msgChar, 10) != pdPASS) {
-                Serial.println("Failed to add to mesh queue");
-            }
-        }
+    if (xTaskCreate(serialReadTask, "serialReadTask", 5000, this, 1, NULL) != pdPASS) {
+        Serial.println("Failed to create serialReadTask");
     }
+    if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 5000, this, 1, NULL) != pdPASS) {
+        Serial.println("Failed to create meshBroadCastTask");
+    }
+}
 
-    void Comms::enqueueSerialOutput(const String &msg)
+void Comms::enqueueMeshOutput(const String &msg)
+{
+    if (msg != "") 
     {
-        if (msg != "") {
-            char msgChar[256];
-            msg.toCharArray(msgChar, sizeof(msgChar));
-            if (xQueueSend(serialOutPutQueue, &msgChar, 10) != pdPASS) {
-                Serial.println("Failed to add to serial queue");
-            }
+        char msgChar[256];
+        msg.toCharArray(msgChar, sizeof(msgChar));
+        if (xQueueSend(meshOutputQueue, &msgChar, 10) != pdPASS) 
+        {
+            Serial.println("Failed to add to mesh queue");
         }
     }
+}
+
+void Comms::enqueueSerialOutput(const String &msg)
+{
+    if (msg != "") 
+    {
+        char msgChar[256];
+        msg.toCharArray(msgChar, sizeof(msgChar));
+        if (xQueueSend(serialOutPutQueue, &msgChar, 10) != pdPASS) 
+        {
+            Serial.println("Failed to add to serial queue");
+        }
+    }
+}

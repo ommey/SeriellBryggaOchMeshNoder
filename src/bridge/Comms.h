@@ -26,6 +26,7 @@ static void meshBroadCastTask(void* pvParameters);
 static void serialWriteTask(void* pvParameters);
 
 static void serialReadTask(void* pvParameters);
+
 public:
     QueueHandle_t serialOutPutQueue;
 
