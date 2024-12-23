@@ -5,6 +5,8 @@
 
 class Tile{
     public: 
+        int Row;
+        int Column;
         enum TileType {
             Path,
             Wall,
@@ -17,6 +19,7 @@ class Tile{
 
         TileType type;
         
+        Tile(int row, int column, TileType type) : Row(row), Column(column), type(type) {}
         Tile(): type(Path) {}
         static TileType stringToType(const String &type);
         static String typeToString(const TileType type);

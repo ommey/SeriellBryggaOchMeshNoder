@@ -1,12 +1,26 @@
 #include "Comms.h"
 
-Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(200, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(200, sizeof(char) * 256)) 
+
+
+Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(201, sizeof(char) * 256)) 
 {
     Serial.begin(115200);
     Serial.setTimeout(50);
     mesh.init(MESH_SSID, MESH_PASSWORD, MESH_PORT);
-    mesh.onReceive([this](uint32_t from, String& msg) {
-        this->serialOutPut(msg);
+    String nodeName = String(mesh.getNodeId());
+    mesh.setName(nodeName);
+    /*mesh.onReceive([this](uint32_t from, String& msg) {
+    this->enqueueSerialOutput(msg);
+    });*/
+
+
+
+    mesh.onReceive([this](String &from, String &msg) {
+    this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+    });
+
+      mesh.onChangedConnections([this]() {
+    Serial.printf("Changed connection\n");
     });
 }
     
@@ -42,7 +56,14 @@ void Comms::serialWriteTask(void *pvParameters)
         char msgChar[256];
         while (1) {
             if (xQueueReceive(comms->serialOutPutQueue, &msgChar, 10) == pdPASS) {
-                Serial.println(msgChar);
+                if (msgChar != "") {
+                    try {
+                        Serial.println(msgChar);
+                    }
+                    catch (...) {
+                        
+                    }
+                }
             }
             vTaskDelay(50 / portTICK_PERIOD_MS);
         }
@@ -64,9 +85,6 @@ void Comms::serialWriteTask(void *pvParameters)
         }
 
     };
-
-
-    
         int amntjson = 0;
         int amntString = 0;
         while (1) {
@@ -74,13 +92,14 @@ void Comms::serialWriteTask(void *pvParameters)
                 String msg = Serial.readStringUntil('\n');
                 if (msg.startsWith("{") && msg.endsWith("}"))
                 {
+                    comms->enqueueSerialOutput(msg);
                     StaticJsonDocument<256> doc;
                     DeserializationError error = deserializeJson(doc, msg);
                     if (error) {
-                        comms->serialOutPut("Failed to parse JSON");
+                        comms->enqueueSerialOutput("Failed to parse JSON");
                     }
                     else{
-                        //comms->serialOutPut("Parsed JSON, " + String(amntjson) + ", " + msg);
+                        //comms->enqueueSerialOutput("Parsed JSON, " + String(amntjson) + ", " + msg);
                         //amntjson++;
                         CommandToGui commandToGui;
                         switch (comms->stringToCommand(doc["Command"]))
@@ -99,7 +118,7 @@ void Comms::serialWriteTask(void *pvParameters)
                         case commandsToReceive::Reset:
                             comms->scene->reset();
                             commandToGui.Command = "Reset";
-                            comms->serialOutPut(commandToGui.ToJson());
+                            comms->enqueueSerialOutput(commandToGui.ToJson());
                             break;
                         default:
                             break;
@@ -107,10 +126,15 @@ void Comms::serialWriteTask(void *pvParameters)
 
                     }
                 }
+                else
+                {
+                    comms->enqueueSerialOutput("Bradcasting :" + msg);
+                    comms->enqueueMeshOutput(msg);
+                }
 
 
-                //comms->serialOutPut(msg);
-                //comms->meshOutPut(msg);
+                //comms->enqueueSerialOutput(msg);
+                //comms->enqueueMeshOutput(msg);
             }
             vTaskDelay(30 / portTICK_PERIOD_MS);
         }
@@ -162,7 +186,7 @@ void Comms::serialWriteTask(void *pvParameters)
         }
     }
 
-    void Comms::meshOutPut(const String &msg)
+    void Comms::enqueueMeshOutput(const String &msg)
     {
         if (msg != "") {
             char msgChar[256];
@@ -173,7 +197,7 @@ void Comms::serialWriteTask(void *pvParameters)
         }
     }
 
-    void Comms::serialOutPut(const String &msg)
+    void Comms::enqueueSerialOutput(const String &msg)
     {
         if (msg != "") {
             char msgChar[256];

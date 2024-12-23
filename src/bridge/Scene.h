@@ -26,7 +26,6 @@ class Scene {
 
         void reset();
 
-        //void registerComms(Comms* comms);
         void registerSerialQueue(QueueHandle_t* serialQueue);
 
         void sceneToComms(const String& msg);
@@ -38,6 +37,8 @@ class Scene {
         void openTileUpdates();
 
         void updateTile(int row, int column, Tile::TileType type);
+
+        void internMapUpdate();
 
         void start();
 };
