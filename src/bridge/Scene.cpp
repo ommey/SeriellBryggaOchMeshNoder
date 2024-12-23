@@ -77,7 +77,7 @@ void Scene::tileUpdateTask(void *p)
     Scene* scene = static_cast<Scene*>(p);
     MapUpdate mapUpdate;
 
-    while (true)
+    while (scene->map)
     {
 
         if (xQueueReceive(scene->sceneUpdateQueue, &mapUpdate, 0) == pdPASS) // Non-blocking
@@ -85,7 +85,10 @@ void Scene::tileUpdateTask(void *p)
             if (scene->map)
             {
                 scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
-            //    scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+                
+
+                //scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+                       
             }
             else
             {
@@ -101,7 +104,7 @@ void Scene::mapHandlerTask(void *p)
 {
     Scene* scene = static_cast<Scene*>(p);
 
-    while (true)
+    while (scene->map)
     {
         // Perform periodic handling logic
         if (scene->map)
@@ -139,7 +142,14 @@ void Scene::mapHandlerTask(void *p)
                         
                         break;
                     case Tile::TileType::Smokey:
-                        
+                        for (Tile tile : map->getAdjacentTiles(r, c))
+                            {
+                                if (tile.type == Tile::TileType::Fire)
+                                {
+                                updateTile(r, c, Tile::TileType::Fire);
+                                break;
+                                }  
+                        }
                         break;
                     case Tile::TileType::Fire:
                         if (map->fireSpreadMap[r][c] > 5)
@@ -147,11 +157,10 @@ void Scene::mapHandlerTask(void *p)
                             map->fireSpreadMap[r][c] = 0;
                             for (Tile tile : map->getAdjacentTiles(r, c))
                             {
-                                if (tile.type != Tile::TileType::Fire)
+                                if (tile.type != Tile::TileType::Fire && tile.type != Tile::TileType::Wall)
                                 {
-                                
                                 updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
-                                vTaskDelay(20 / portTICK_PERIOD_MS);
+                                break;
                                 }
                                 
                             }
@@ -169,8 +178,29 @@ void Scene::mapHandlerTask(void *p)
                         
                         break;
                     case Tile::TileType::HasHazard:
-                        
-                        break;
+                        {
+                        bool hasAdjacentFire = false;
+                        for (Tile tile : map->getAdjacentTiles(r, c))
+                        {
+                            if (tile.type == Tile::TileType::Fire)
+                            {
+                                hasAdjacentFire = true;
+                                break; // räcker med att en av granntilar är i brand
+                            }
+                        }
+                        if (hasAdjacentFire)
+                        {
+                            for (Tile tile : map->getAdjacentTiles(r, c))
+                            {
+                                if (tile.type != Tile::TileType::Wall && tile.type != Tile::TileType::Fire)
+                                {
+                                    updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
+                                    //vTaskDelay(15 / portTICK_PERIOD_MS); // Optional: Spread with delay
+                                }
+                            }
+                        }
+                    }
+                    break;
                     case Tile::TileType::FireFighter:
                         
                         break;

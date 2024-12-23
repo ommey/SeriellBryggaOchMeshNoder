@@ -26,7 +26,6 @@ class Scene {
 
         void reset();
 
-        //void registerComms(Comms* comms);
         void registerSerialQueue(QueueHandle_t* serialQueue);
 
         void sceneToComms(const String& msg);

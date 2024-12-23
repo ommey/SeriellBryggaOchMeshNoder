@@ -4,18 +4,19 @@
 
 
 #include <Arduino.h>
-#include "painlessMesh.h"
+#include "namedMesh.h"
 #include <ArduinoJson.h>
 #include "Scene.h"
 
-#define   MESH_SSID       "meshNetwork"
-#define   MESH_PASSWORD   "meshPassword"
+#define   MESH_SSID       "OmarsSexigaNätverk"
+#define   MESH_PASSWORD   "Porr2Porr"
 #define   MESH_PORT       5555
 
 class Comms {
 private:
+    String nodeName = "Bridge";
     Scene* scene;
-    painlessMesh mesh;
+    namedMesh mesh;
     QueueHandle_t meshOutputQueue;
 
 static void meshUpdate(void* pvParameters);
@@ -45,9 +46,9 @@ public:
 
     void start();
 
-    void meshOutPut(const String& msg);
+    void enqueueMeshOutput(const String& msg);
 
-    void serialOutPut(const String& msg);
+    void enqueueSerialOutput(const String& msg);
 };
 
 

@@ -20,6 +20,10 @@ void Map::updateTile(int row, int column, Tile::TileType type) {
     if (row < 0 || row >= Rows || column < 0 || column >= Columns) {
         throw std::out_of_range("Invalid row or column index");
     }
+    for (Tile tile: getAdjacentTiles(row, column))
+    {
+        fireSpreadMap[tile.Row][tile.Column] = 0;
+    }
     // Update the tile type
     tiles[row][column].type = type;
 }
