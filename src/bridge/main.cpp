@@ -1,14 +1,14 @@
 #include <Arduino.h>
-#include "Scene.h"
-#include "Comms.h"
+#include "BridgeScene.h"
+#include "BridgeComms.h"
 
 
 
 // Main application
 void setup() {
     delay(1000);
-    static Scene scene;
-    static Comms comms(&scene);
+    static BridgeScene scene;
+    static BridgeComms comms(&scene);
     scene.registerSerialQueue(&comms.serialOutPutQueue);
     comms.start();
     comms.enqueueSerialOutput("Just started");

@@ -1,6 +1,6 @@
-#include "Scene.h"
+#include "BridgeScene.h"
 
-Scene::Scene() : map(nullptr), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
+BridgeScene::BridgeScene() : map(nullptr), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
 struct TileUpdate
     {
@@ -22,12 +22,12 @@ struct TileUpdate
         }
     };
 
-void Scene::registerSerialQueue(QueueHandle_t* serialQueue)
+void BridgeScene::registerSerialQueue(QueueHandle_t* serialQueue)
 {
     this->sceneSerialQueue = serialQueue;
 }
 
-void Scene::sceneToComms(const String &msg)
+void BridgeScene::sceneToComms(const String &msg)
 {
     if (sceneSerialQueue)
     {
@@ -47,7 +47,7 @@ void Scene::sceneToComms(const String &msg)
     }
 }
 
-void Scene::createNewMap(int rows, int columns)
+void BridgeScene::createNewMap(int rows, int columns)
 {
     if (map != nullptr)
     {
@@ -57,7 +57,7 @@ void Scene::createNewMap(int rows, int columns)
     sceneToComms("Created new map" + String(rows) + "x" + String(columns));
 }
 
-void Scene::enqueueMapUpdate(int row, int column, Tile::TileType type)
+void BridgeScene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
     if (!map)
             {
@@ -72,9 +72,9 @@ void Scene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 
 
 
-void Scene::tileUpdateTask(void *p)
+void BridgeScene::tileUpdateTask(void *p)
 {
-    Scene* scene = static_cast<Scene*>(p);
+    BridgeScene* scene = static_cast<BridgeScene*>(p);
     MapUpdate mapUpdate;
 
     while (scene->map)
@@ -100,9 +100,9 @@ void Scene::tileUpdateTask(void *p)
     }
 }
 
-void Scene::mapHandlerTask(void *p)
+void BridgeScene::mapHandlerTask(void *p)
 {
-    Scene* scene = static_cast<Scene*>(p);
+    BridgeScene* scene = static_cast<BridgeScene*>(p);
 
     while (scene->map)
     {
@@ -116,7 +116,7 @@ void Scene::mapHandlerTask(void *p)
 
     }
 
-    void Scene::updateTile(int row, int column, Tile::TileType type)
+    void BridgeScene::updateTile(int row, int column, Tile::TileType type)
     {
     //för servern
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
@@ -126,7 +126,7 @@ void Scene::mapHandlerTask(void *p)
     //för klienten
     }
 
-    void Scene::internMapUpdate()
+    void BridgeScene::internMapUpdate()
     {
         map->incrementFireSpread();
           for(int r = 0; r < map->Rows; r++)
@@ -211,7 +211,7 @@ void Scene::mapHandlerTask(void *p)
             }
     }
 
-void Scene::openTileUpdates()
+void BridgeScene::openTileUpdates()
 {
     sceneToComms("Opening tile updates...");
     if (tileUpdateTaskHandle == NULL)
@@ -227,7 +227,7 @@ void Scene::openTileUpdates()
     }
 }
 
-void Scene::start()
+void BridgeScene::start()
 {
     sceneToComms("Starting sceneHandling...");
     if (mapHandlerTaskHandle == NULL)
@@ -242,7 +242,7 @@ void Scene::start()
     }
 }
 
-Scene::~Scene()
+BridgeScene::~BridgeScene()
 {
     if (map)
     {
@@ -251,7 +251,7 @@ Scene::~Scene()
     vQueueDelete(sceneUpdateQueue);
 }
 
-void Scene::reset()
+void BridgeScene::reset()
 {
     sceneToComms("Sceme Reset...");
     if (map)

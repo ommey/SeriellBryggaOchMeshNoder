@@ -1,21 +1,21 @@
-#ifndef COMMS_H
-#define COMMS_H
+#ifndef BRIDGECOMMS_H
+#define BRIDGECOMMS_H
 
 
 
 #include <Arduino.h>
 #include "namedMesh.h"
 #include <ArduinoJson.h>
-#include "Scene.h"
+#include "BridgeScene.h"
 
 #define   MESH_SSID       "OmarsSexigaNätverk"
 #define   MESH_PASSWORD   "Porr2Porr"
 #define   MESH_PORT       5555
 
-class Comms {
+class BridgeComms {
 private:
     String nodeName = "Bridge";
-    Scene* scene;
+    BridgeScene* scene;
     namedMesh mesh;
     QueueHandle_t meshOutputQueue;
 
@@ -41,9 +41,9 @@ public:
 
     QueueHandle_t getSerialOutPutQueue();
 
-    Comms(Scene* scene);
+    BridgeComms(BridgeScene* scene);
 
-    ~Comms();
+    ~BridgeComms();
 
     void start();
 

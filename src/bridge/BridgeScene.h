@@ -1,5 +1,5 @@
-#ifndef SCENE_H
-#define SCENE_H
+#ifndef BRIDGESCENE_H
+#define BRIDGESCENE_H
 
 #include <Arduino.h>
 #include "Map.h"
@@ -9,7 +9,7 @@
 
 
 
-class Scene {
+class BridgeScene {
     private:
         Map* map;
         //Comms* comms;
@@ -21,8 +21,8 @@ class Scene {
         static void tileUpdateTask(void* p);
         
     public:
-        Scene();
-        ~Scene();
+        BridgeScene();
+        ~BridgeScene();
 
         void reset();
 

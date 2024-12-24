@@ -1,8 +1,8 @@
-#include "Comms.h"
+#include "BridgeComms.h"
 
 
 
-Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(201, sizeof(char) * 256)) 
+BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(201, sizeof(char) * 256)) 
 {
     Serial.begin(115200);
     Serial.setTimeout(50);
@@ -23,18 +23,18 @@ Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, s
     });
 }
     
-void Comms::meshUpdate(void *pvParameters)
+void BridgeComms::meshUpdate(void *pvParameters)
 {
-    Comms* comms = static_cast<Comms*>(pvParameters);
+    BridgeComms* comms = static_cast<BridgeComms*>(pvParameters);
     while (1) {
         comms->mesh.update();
         vTaskDelay(30 / portTICK_PERIOD_MS);
     }
 }
 
-void Comms::meshBroadCastTask(void *pvParameters)
+void BridgeComms::meshBroadCastTask(void *pvParameters)
 {
-Comms* comms = static_cast<Comms*>(pvParameters);
+BridgeComms* comms = static_cast<BridgeComms*>(pvParameters);
 char msgChar[256];
 while (1) 
     {
@@ -49,9 +49,9 @@ while (1)
     }
 }
 
-void Comms::serialWriteTask(void *pvParameters)
+void BridgeComms::serialWriteTask(void *pvParameters)
 {
-    Comms* comms = static_cast<Comms*>(pvParameters);
+    BridgeComms* comms = static_cast<BridgeComms*>(pvParameters);
     char msgChar[256];
     while (1) 
     {
@@ -70,9 +70,9 @@ void Comms::serialWriteTask(void *pvParameters)
     }
 }
 
-void Comms::serialReadTask(void *pvParameters)
+void BridgeComms::serialReadTask(void *pvParameters)
 {
-Comms* comms = static_cast<Comms*>(pvParameters);
+BridgeComms* comms = static_cast<BridgeComms*>(pvParameters);
 struct CommandToGui
 {
     String Command;
@@ -147,7 +147,7 @@ struct CommandToGui
     }
 }
 
-Comms::commandsToReceive Comms::stringToCommand(const String &command)
+BridgeComms::commandsToReceive BridgeComms::stringToCommand(const String &command)
 {
     if (command == "NewMap"){
         return NewMap;
@@ -166,18 +166,18 @@ Comms::commandsToReceive Comms::stringToCommand(const String &command)
     }
 }
 
-QueueHandle_t Comms::getSerialOutPutQueue()
+QueueHandle_t BridgeComms::getSerialOutPutQueue()
 { 
     return serialOutPutQueue; 
 }
 
-Comms::~Comms()
+BridgeComms::~BridgeComms()
 {
     vQueueDelete(serialOutPutQueue);
     vQueueDelete(meshOutputQueue);
 }
 
-void Comms::start()
+void BridgeComms::start()
 {
     if (xTaskCreate(meshUpdate, "meshUpdate", 5000, this, 1, NULL) != pdPASS) {
         Serial.println("Failed to create meshUpdate task");
@@ -193,7 +193,7 @@ void Comms::start()
     }
 }
 
-void Comms::enqueueMeshOutput(const String &msg)
+void BridgeComms::enqueueMeshOutput(const String &msg)
 {
     if (msg != "") 
     {
@@ -206,7 +206,7 @@ void Comms::enqueueMeshOutput(const String &msg)
     }
 }
 
-void Comms::enqueueSerialOutput(const String &msg)
+void BridgeComms::enqueueSerialOutput(const String &msg)
 {
     if (msg != "") 
     {
