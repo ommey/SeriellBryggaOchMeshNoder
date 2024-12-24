@@ -27,7 +27,7 @@ void Scene::registerSerialQueue(QueueHandle_t* serialQueue)
     this->sceneSerialQueue = serialQueue;
 }
 
-void Scene::sceneToComms(const String &msg)
+void Scene::sceneToSerial(const String &msg)
 {
     if (sceneSerialQueue)
     {
@@ -54,14 +54,14 @@ void Scene::createNewMap(int rows, int columns)
         delete map;
     }
     map = new Map(rows, columns);
-    sceneToComms("Created new map" + String(rows) + "x" + String(columns));
+    sceneToSerial("Created new map" + String(rows) + "x" + String(columns));
 }
 
 void Scene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
     if (!map)
             {
-                sceneToComms("No map to update");
+                sceneToSerial("No map to update");
                 return;
             }
             MapUpdate mapUpdate = {row, column, type};
@@ -87,13 +87,13 @@ void Scene::tileUpdateTask(void *p)
                 scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
                 
 
-                //scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+                //scene->sceneToSerial("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
                        
             }
             else
             {
                 Serial.println("No map to update");
-                //scene->sceneToComms("No map to update");
+                //scene->sceneToSerial("No map to update");
             }
         }
         vTaskDelay(50 / portTICK_PERIOD_MS); // Delay for periodic processing
@@ -120,7 +120,7 @@ void Scene::mapHandlerTask(void *p)
     {
     //för servern
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
-    sceneToComms(tileUpdate.ToJson());
+    sceneToSerial(tileUpdate.ToJson());
     //internt i servern
     map->updateTile(row, column, type);
     //för klienten
@@ -213,7 +213,7 @@ void Scene::mapHandlerTask(void *p)
 
 void Scene::openTileUpdates()
 {
-    sceneToComms("Opening tile updates...");
+    sceneToSerial("Opening tile updates...");
     if (tileUpdateTaskHandle == NULL)
     {
     if (xTaskCreate(tileUpdateTask, "tileUpdateTask", 5000, this, 1, &tileUpdateTaskHandle) != pdPASS) {
@@ -229,7 +229,7 @@ void Scene::openTileUpdates()
 
 void Scene::start()
 {
-    sceneToComms("Starting sceneHandling...");
+    sceneToSerial("Starting sceneHandling...");
     if (mapHandlerTaskHandle == NULL)
     {
     if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 5000, this, 1, &mapHandlerTaskHandle) != pdPASS) {
@@ -253,7 +253,7 @@ Scene::~Scene()
 
 void Scene::reset()
 {
-    sceneToComms("Sceme Reset...");
+    sceneToSerial("Sceme Reset...");
     if (map)
     {
         delete map;

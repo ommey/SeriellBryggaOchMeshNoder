@@ -28,7 +28,7 @@ class Scene {
 
         void registerSerialQueue(QueueHandle_t* serialQueue);
 
-        void sceneToComms(const String& msg);
+        void sceneToSerial(const String& msg);
         
         void createNewMap(int rows, int columns);
 

@@ -10,9 +10,11 @@ void setup() {
     static BridgeScene scene;
     static BridgeComms comms(&scene);
     scene.registerSerialQueue(&comms.serialOutPutQueue);
+    scene.registerMeshQueue(&comms.meshOutputQueue);
     comms.start();
     comms.enqueueSerialOutput("Just started");
     //comms.enqueueMeshOutput("Just started");
+
 
 }
 

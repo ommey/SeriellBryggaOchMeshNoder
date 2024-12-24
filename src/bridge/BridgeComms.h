@@ -17,7 +17,6 @@ private:
     String nodeName = "Bridge";
     BridgeScene* scene;
     namedMesh mesh;
-    QueueHandle_t meshOutputQueue;
 
 static void meshUpdate(void* pvParameters);
 
@@ -29,6 +28,7 @@ static void serialReadTask(void* pvParameters);
 
 public:
     QueueHandle_t serialOutPutQueue;
+    QueueHandle_t meshOutputQueue;
 
     enum commandsToReceive{
         NewMap,
@@ -50,6 +50,7 @@ public:
     void enqueueMeshOutput(const String& msg);
 
     void enqueueSerialOutput(const String& msg);
+
 };
 
 

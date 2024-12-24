@@ -1,6 +1,6 @@
 #include "BridgeScene.h"
 
-BridgeScene::BridgeScene() : map(nullptr), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
+BridgeScene::BridgeScene() : map(nullptr), sceneSerialQueue(nullptr), sceneMeshQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
 struct TileUpdate
     {
@@ -27,7 +27,32 @@ void BridgeScene::registerSerialQueue(QueueHandle_t* serialQueue)
     this->sceneSerialQueue = serialQueue;
 }
 
-void BridgeScene::sceneToComms(const String &msg)
+void BridgeScene::registerMeshQueue(QueueHandle_t* meshQueue)
+{
+    this->sceneMeshQueue = meshQueue;
+}
+
+void BridgeScene::sceneToMesh(const String &msg)
+{
+    if (sceneMeshQueue)
+    {
+        char msgChar[256];
+        msg.toCharArray(msgChar, sizeof(msgChar));
+        if(xQueueSend(*sceneMeshQueue, &msgChar, 10)== pdPASS)
+        {
+        }
+        else
+        {
+            Serial.println("Failed to send to mesh queue");
+        }
+    }
+    else
+    {
+    Serial.println("No mesh-Queue to send to");
+    }
+}
+
+void BridgeScene::sceneToSerial(const String &msg)
 {
     if (sceneSerialQueue)
     {
@@ -43,7 +68,7 @@ void BridgeScene::sceneToComms(const String &msg)
     }
     else
     {
-    Serial.println("No Queue to send to");
+    Serial.println("No serial-Queue to send to");
     }
 }
 
@@ -54,14 +79,14 @@ void BridgeScene::createNewMap(int rows, int columns)
         delete map;
     }
     map = new Map(rows, columns);
-    sceneToComms("Created new map" + String(rows) + "x" + String(columns));
+    sceneToSerial("Created new map" + String(rows) + "x" + String(columns));
 }
 
 void BridgeScene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
     if (!map)
             {
-                sceneToComms("No map to update");
+                sceneToSerial("No map to update");
                 return;
             }
             MapUpdate mapUpdate = {row, column, type};
@@ -87,7 +112,7 @@ void BridgeScene::tileUpdateTask(void *p)
                 scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
                 
 
-                //scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+                //scene->sceneToSerial("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
                        
             }
             else
@@ -118,12 +143,13 @@ void BridgeScene::mapHandlerTask(void *p)
 
     void BridgeScene::updateTile(int row, int column, Tile::TileType type)
     {
-    //för servern
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
-    sceneToComms(tileUpdate.ToJson());
-    //internt i servern
+    //för GUI uppdatering
+    sceneToSerial(tileUpdate.ToJson());
+    //för klienter
+    sceneToMesh(tileUpdate.ToJson());
+    //internt
     map->updateTile(row, column, type);
-    //för klienten
     }
 
     void BridgeScene::internMapUpdate()
@@ -213,7 +239,7 @@ void BridgeScene::mapHandlerTask(void *p)
 
 void BridgeScene::openTileUpdates()
 {
-    sceneToComms("Opening tile updates...");
+    sceneToSerial("Opening tile updates...");
     if (tileUpdateTaskHandle == NULL)
     {
     if (xTaskCreate(tileUpdateTask, "tileUpdateTask", 5000, this, 1, &tileUpdateTaskHandle) != pdPASS) {
@@ -229,7 +255,7 @@ void BridgeScene::openTileUpdates()
 
 void BridgeScene::start()
 {
-    sceneToComms("Starting sceneHandling...");
+    sceneToSerial("Starting sceneHandling...");
     if (mapHandlerTaskHandle == NULL)
     {
     if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 5000, this, 1, &mapHandlerTaskHandle) != pdPASS) {
@@ -253,7 +279,7 @@ BridgeScene::~BridgeScene()
 
 void BridgeScene::reset()
 {
-    sceneToComms("Sceme Reset...");
+    sceneToSerial("Sceme Reset...");
     if (map)
     {
         delete map;

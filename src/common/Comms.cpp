@@ -16,7 +16,28 @@ Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, s
 
 
     mesh.onReceive([this](String &from, String &msg) {
-    this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+    
+    if (from == "Bridge")
+    {
+        if (msg.startsWith("{") && msg.endsWith("}"))
+        {
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, msg);
+            if (error) {
+                this->enqueueSerialOutput("Failed to parse JSON");
+            }
+            else
+            {
+                this->enqueueSerialOutput("command from Bridge received");
+            }
+        }
+        else
+        {
+            this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+        }
+        
+    }
+    
     });
 
       mesh.onChangedConnections([this]() {
