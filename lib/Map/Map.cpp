@@ -1,8 +1,15 @@
 #include "Map.h"
 #include <stdexcept>
 
-Map::Map(int rows, int columns) : Rows(rows), Columns(columns) {
-    // Initialize 2D vectors with default values
+
+Map::Map() : Rows(0), Columns(0), tiles(), fireSpreadMap()
+{
+}
+
+void Map::createMap(int rows, int columns)
+{    
+    Rows = rows;
+    Columns = columns;
     tiles = std::vector<std::vector<Tile>>(Rows, std::vector<Tile>(Columns));
     fireSpreadMap = std::vector<std::vector<int>>(Rows, std::vector<int>(Columns, 0));
 
@@ -11,11 +18,10 @@ Map::Map(int rows, int columns) : Rows(rows), Columns(columns) {
             tiles[row][col] = Tile(row, col, Tile::TileType::Path);
         }
     }
-    
-
 }
 
-void Map::updateTile(int row, int column, Tile::TileType type) {
+void Map::updateTile(int row, int column, Tile::TileType type)
+{
     // Validate indices
     if (row < 0 || row >= Rows || column < 0 || column >= Columns) {
         throw std::out_of_range("Invalid row or column index");

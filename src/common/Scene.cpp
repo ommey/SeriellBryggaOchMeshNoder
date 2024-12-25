@@ -1,6 +1,6 @@
 #include "Scene.h"
 
-Scene::Scene() : map(nullptr), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
+Scene::Scene() : map(Map()), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
 struct TileUpdate
     {
@@ -49,17 +49,13 @@ void Scene::sceneToSerial(const String &msg)
 
 void Scene::createNewMap(int rows, int columns)
 {
-    if (map != nullptr)
-    {
-        delete map;
-    }
-    map = new Map(rows, columns);
+    map.createMap(rows, columns);
     sceneToSerial("Created new map" + String(rows) + "x" + String(columns));
 }
 
 void Scene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
-    if (!map)
+    if (!map.isCreated())
             {
                 sceneToSerial("No map to update");
                 return;
@@ -77,14 +73,14 @@ void Scene::tileUpdateTask(void *p)
     Scene* scene = static_cast<Scene*>(p);
     MapUpdate mapUpdate;
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
 
         if (xQueueReceive(scene->sceneUpdateQueue, &mapUpdate, 0) == pdPASS) // Non-blocking
         {
-            if (scene->map)
+            if (scene->map.isCreated())
             {
-                scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
+                scene->map.updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
                 
 
                 //scene->sceneToSerial("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
@@ -104,10 +100,10 @@ void Scene::mapHandlerTask(void *p)
 {
     Scene* scene = static_cast<Scene*>(p);
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
         // Perform periodic handling logic
-        if (scene->map)
+        if (scene->map.isCreated())
         {              
          scene->internMapUpdate(); 
         }
@@ -121,7 +117,7 @@ void Scene::mapHandlerTask(void *p)
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
     sceneToSerial(tileUpdate.ToJson());
     //internt i klienten
-    map->updateTile(row, column, type);
+    map.updateTile(row, column, type);
     //för klienten
     }
 
@@ -162,9 +158,9 @@ void Scene::start()
 
 Scene::~Scene()
 {
-    if (map)
+    if (map.isCreated())
     {
-        delete map;
+        map.createMap(0, 0);
     }
     vQueueDelete(sceneUpdateQueue);
 
@@ -173,10 +169,9 @@ Scene::~Scene()
 void Scene::reset()
 {
     sceneToSerial("Sceme Reset...");
-    if (map)
+    if (map.isCreated())
     {
-        delete map;
-        map = nullptr;
+        map.createMap(0, 0);
     }
     if (mapHandlerTaskHandle != NULL)
     {

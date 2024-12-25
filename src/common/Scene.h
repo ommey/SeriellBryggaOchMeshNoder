@@ -20,7 +20,7 @@ class Scene {
         static void tileUpdateTask(void* p);
         
     public:
-        Map* map;
+        Map map;
         Scene();
         ~Scene();
 

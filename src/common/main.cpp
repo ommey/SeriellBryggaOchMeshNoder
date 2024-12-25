@@ -13,7 +13,7 @@ void setup() {
     static Comms comms(&scene, &fireFighter);
     fireFighter.registerSerialOutput(&comms.serialOutPutQueue);
     fireFighter.registerMeshOutput(&comms.meshOutputQueue);
-    fireFighter.registerMap(&*scene.map);
+    fireFighter.registerMap(&scene.map);
     scene.registerSerialQueue(&comms.serialOutPutQueue);
     comms.start();
     comms.enqueueSerialOutput("Just started");
