@@ -11,7 +11,7 @@
 
 class BridgeScene {
     private:
-        Map* map;
+        Map map;
         //Comms* comms;
         QueueHandle_t* sceneSerialQueue;
         QueueHandle_t* sceneMeshQueue;

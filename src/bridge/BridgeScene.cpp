@@ -1,6 +1,6 @@
 #include "BridgeScene.h"
 
-BridgeScene::BridgeScene() : map(nullptr), sceneSerialQueue(nullptr), sceneMeshQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
+BridgeScene::BridgeScene() : map(Map()), sceneSerialQueue(nullptr), sceneMeshQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
 struct TileUpdate
     {
@@ -74,17 +74,13 @@ void BridgeScene::sceneToSerial(const String &msg)
 
 void BridgeScene::createNewMap(int rows, int columns)
 {
-    if (map != nullptr)
-    {
-        delete map;
-    }
-    map = new Map(rows, columns);
+    map.createMap(rows, columns);
     sceneToSerial("Created new map" + String(rows) + "x" + String(columns));
 }
 
 void BridgeScene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
-    if (!map)
+    if (!map.isCreated())
             {
                 sceneToSerial("No map to update");
                 return;
@@ -102,14 +98,14 @@ void BridgeScene::tileUpdateTask(void *p)
     BridgeScene* scene = static_cast<BridgeScene*>(p);
     MapUpdate mapUpdate;
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
 
         if (xQueueReceive(scene->sceneUpdateQueue, &mapUpdate, 0) == pdPASS) // Non-blocking
         {
-            if (scene->map)
+            if (scene->map.isCreated())
             {
-                scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
+                scene->map.updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
                 
 
                 //scene->sceneToSerial("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
@@ -129,10 +125,10 @@ void BridgeScene::mapHandlerTask(void *p)
 {
     BridgeScene* scene = static_cast<BridgeScene*>(p);
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
         // Perform periodic handling logic
-        if (scene->map)
+        if (scene->map.isCreated())
         {              
          scene->internMapUpdate(); 
         }
@@ -149,17 +145,17 @@ void BridgeScene::mapHandlerTask(void *p)
     //för klienter
     sceneToMesh(tileUpdate.ToJson());
     //internt
-    map->updateTile(row, column, type);
+    map.updateTile(row, column, type);
     }
 
     void BridgeScene::internMapUpdate()
     {
-        map->incrementFireSpread();
-          for(int r = 0; r < map->Rows; r++)
+        map.incrementFireSpread();
+          for(int r = 0; r < map.Rows; r++)
             {
-                for(int c = 0; c < map->Columns; c++)
+                for(int c = 0; c < map.Columns; c++)
                 {
-                    switch (map->tiles[r][c].type)
+                    switch (map.tiles[r][c].type)
                     {
                     case Tile::TileType::Path:
                         
@@ -168,7 +164,7 @@ void BridgeScene::mapHandlerTask(void *p)
                         
                         break;
                     case Tile::TileType::Smokey:
-                        for (Tile tile : map->getAdjacentTiles(r, c))
+                        for (Tile tile : map.getAdjacentTiles(r, c))
                             {
                                 if (tile.type == Tile::TileType::Fire)
                                 {
@@ -178,10 +174,10 @@ void BridgeScene::mapHandlerTask(void *p)
                         }
                         break;
                     case Tile::TileType::Fire:
-                        if (map->fireSpreadMap[r][c] > 5)
+                        if (map.fireSpreadMap[r][c] > 5)
                         {
-                            map->fireSpreadMap[r][c] = 0;
-                            for (Tile tile : map->getAdjacentTiles(r, c))
+                            map.fireSpreadMap[r][c] = 0;
+                            for (Tile tile : map.getAdjacentTiles(r, c))
                             {
                                 if (tile.type != Tile::TileType::Fire && tile.type != Tile::TileType::Wall)
                                 {
@@ -206,7 +202,7 @@ void BridgeScene::mapHandlerTask(void *p)
                     case Tile::TileType::HasHazard:
                         {
                         bool hasAdjacentFire = false;
-                        for (Tile tile : map->getAdjacentTiles(r, c))
+                        for (Tile tile : map.getAdjacentTiles(r, c))
                         {
                             if (tile.type == Tile::TileType::Fire)
                             {
@@ -216,7 +212,7 @@ void BridgeScene::mapHandlerTask(void *p)
                         }
                         if (hasAdjacentFire)
                         {
-                            for (Tile tile : map->getAdjacentTiles(r, c))
+                            for (Tile tile : map.getAdjacentTiles(r, c))
                             {
                                 if (tile.type != Tile::TileType::Wall && tile.type != Tile::TileType::Fire)
                                 {
@@ -270,9 +266,9 @@ void BridgeScene::start()
 
 BridgeScene::~BridgeScene()
 {
-    if (map)
+    if (map.isCreated())
     {
-        delete map;
+        map.createMap(0, 0);
     }
     vQueueDelete(sceneUpdateQueue);
 }
@@ -280,10 +276,9 @@ BridgeScene::~BridgeScene()
 void BridgeScene::reset()
 {
     sceneToSerial("Sceme Reset...");
-    if (map)
+    if (map.isCreated())
     {
-        delete map;
-        map = nullptr;
+        map.createMap(0, 0);
     }
     if (mapHandlerTaskHandle != NULL)
     {
