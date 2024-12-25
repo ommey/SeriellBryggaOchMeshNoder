@@ -7,6 +7,7 @@
 #include "namedMesh.h"
 #include <ArduinoJson.h>
 #include "Scene.h"
+#include "FireFighter.h"
 
 #define   MESH_SSID       "OmarsSexigaNätverk"
 #define   MESH_PASSWORD   "Porr2Porr"
@@ -16,8 +17,8 @@ class Comms {
 private:
     String nodeName = "Bridge";
     Scene* scene;
+    FireFighter* fireFighter;
     namedMesh mesh;
-    QueueHandle_t meshOutputQueue;
 
 static void meshUpdate(void* pvParameters);
 
@@ -28,6 +29,7 @@ static void serialWriteTask(void* pvParameters);
 static void serialReadTask(void* pvParameters);
 public:
     QueueHandle_t serialOutPutQueue;
+    QueueHandle_t meshOutputQueue;
 
     enum commandsToReceive{
         NewMap,
@@ -40,7 +42,7 @@ public:
 
     QueueHandle_t getSerialOutPutQueue();
 
-    Comms(Scene* scene);
+    Comms(Scene* scene, FireFighter* fireFighter);
 
     ~Comms();
 

@@ -118,97 +118,16 @@ void Scene::mapHandlerTask(void *p)
 
     void Scene::updateTile(int row, int column, Tile::TileType type)
     {
-    //för servern
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
     sceneToSerial(tileUpdate.ToJson());
-    //internt i servern
+    //internt i klienten
     map->updateTile(row, column, type);
     //för klienten
     }
 
     void Scene::internMapUpdate()
     {
-        map->incrementFireSpread();
-          for(int r = 0; r < map->Rows; r++)
-            {
-                for(int c = 0; c < map->Columns; c++)
-                {
-                    switch (map->tiles[r][c].type)
-                    {
-                    case Tile::TileType::Path:
-                        
-                        break;
-                    case Tile::TileType::Wall:
-                        
-                        break;
-                    case Tile::TileType::Smokey:
-                        for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type == Tile::TileType::Fire)
-                                {
-                                updateTile(r, c, Tile::TileType::Fire);
-                                break;
-                                }  
-                        }
-                        break;
-                    case Tile::TileType::Fire:
-                        if (map->fireSpreadMap[r][c] > 5)
-                        {
-                            map->fireSpreadMap[r][c] = 0;
-                            for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type != Tile::TileType::Fire && tile.type != Tile::TileType::Wall)
-                                {
-                                updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
-                                break;
-                                }
-                                
-                            }
-                        }
-                        
-                        /*for(Tile tile : map->getAdjacentTiles(r, c))
-                        {
-                            if (map->fireSpreadMap[r][c] > 5)
-                            {
-                                updateTile
-                            }
-                        }*/
-                        break;
-                    case Tile::TileType::HasVictim:
-                        
-                        break;
-                    case Tile::TileType::HasHazard:
-                        {
-                        bool hasAdjacentFire = false;
-                        for (Tile tile : map->getAdjacentTiles(r, c))
-                        {
-                            if (tile.type == Tile::TileType::Fire)
-                            {
-                                hasAdjacentFire = true;
-                                break; // räcker med att en av granntilar är i brand
-                            }
-                        }
-                        if (hasAdjacentFire)
-                        {
-                            for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type != Tile::TileType::Wall && tile.type != Tile::TileType::Fire)
-                                {
-                                    updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
-                                    //vTaskDelay(15 / portTICK_PERIOD_MS); // Optional: Spread with delay
-                                }
-                            }
-                        }
-                    }
-                    break;
-                    case Tile::TileType::FireFighter:
-                        
-                        break;
-                    default:
-                        break;
-                    }
-                }
-            }
+        return;
     }
 
 void Scene::openTileUpdates()
@@ -223,7 +142,6 @@ void Scene::openTileUpdates()
     else
     {
         Serial.println("Task already running");
-        
     }
 }
 
@@ -249,6 +167,7 @@ Scene::~Scene()
         delete map;
     }
     vQueueDelete(sceneUpdateQueue);
+
 }
 
 void Scene::reset()
