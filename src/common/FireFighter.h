@@ -9,9 +9,12 @@ class FireFighter{
 private:
 int x;
 int y;
+Map* map;
+
 QueueHandle_t* serialOutputQueue;
 QueueHandle_t* meshOutPutQueue;
 TaskHandle_t fireFighterTaskHandle;
+
 
 static void FireFighterTask(void *pvParameters);
 
@@ -23,6 +26,7 @@ FireFighter();
 ~FireFighter();
 void registerSerialOutput(QueueHandle_t* serialOutputQueue);
 void registerMeshOutput(QueueHandle_t* meshOutPutQueue);
+void registerMap(Map* map);
 
 void start();
 void reset();

@@ -11,7 +11,6 @@
 
 class Scene {
     private:
-        Map* map;
         //Comms* comms;
         QueueHandle_t* sceneSerialQueue;
         QueueHandle_t sceneUpdateQueue;
@@ -21,6 +20,7 @@ class Scene {
         static void tileUpdateTask(void* p);
         
     public:
+        Map* map;
         Scene();
         ~Scene();
 

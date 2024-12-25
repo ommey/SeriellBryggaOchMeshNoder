@@ -18,9 +18,16 @@ void FireFighter::registerSerialOutput(QueueHandle_t *serialOutputQueue)
     this->serialOutputQueue = serialOutputQueue;
 }
 
+
+
 void FireFighter::registerMeshOutput(QueueHandle_t *meshOutPutQueue)
 {
     this->meshOutPutQueue = meshOutPutQueue;
+}
+
+void FireFighter::registerMap(Map* map)
+{
+    this->map = map;
 }
 
 void FireFighter::start()
@@ -53,6 +60,14 @@ void FireFighter::FireFighterTask(void *pvParameters)
     while (1)
     {
         fireFighter->enqueueSerialOutput("FireFighterTask going strong" + String(millis()));
+        if(fireFighter->map != nullptr)
+        {
+            fireFighter->enqueueSerialOutput("Im working with map: " + String(fireFighter->map->Rows) + ", " + String(fireFighter->map->Columns));
+        }
+        else 
+        {
+            fireFighter->enqueueMeshOutput("No map to work with");
+        }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     

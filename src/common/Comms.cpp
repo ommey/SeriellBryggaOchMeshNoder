@@ -250,3 +250,8 @@ void Comms::serialWriteTask(void *pvParameters)
             }
         }
     }
+
+    String Comms::getID()
+    {
+        return String(mesh.getNodeId());
+    }

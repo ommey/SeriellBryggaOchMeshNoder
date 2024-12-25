@@ -51,6 +51,8 @@ public:
     void enqueueMeshOutput(const String& msg);
 
     void enqueueSerialOutput(const String& msg);
+
+    String getID();
 };
 
 
