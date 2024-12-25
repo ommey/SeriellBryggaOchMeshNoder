@@ -238,7 +238,7 @@ void BridgeScene::openTileUpdates()
     sceneToSerial("Opening tile updates...");
     if (tileUpdateTaskHandle == NULL)
     {
-    if (xTaskCreate(tileUpdateTask, "tileUpdateTask", 1024, this, 1, &tileUpdateTaskHandle) != pdPASS) {
+    if (xTaskCreate(tileUpdateTask, "tileUpdateTask", 2096, this, 1, &tileUpdateTaskHandle) != pdPASS) {
         Serial.println("Failed to create ExternSceneUpdateTask");
     }
     }
@@ -254,7 +254,7 @@ void BridgeScene::start()
     sceneToSerial("Starting sceneHandling...");
     if (mapHandlerTaskHandle == NULL)
     {
-    if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 5000, this, 1, &mapHandlerTaskHandle) != pdPASS) {
+    if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 2096, this, 1, &mapHandlerTaskHandle) != pdPASS) {
         Serial.println("Failed to create ExternSceneUpdateTask");
     }
     }

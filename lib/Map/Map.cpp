@@ -111,3 +111,81 @@ std::vector<Tile> Map::getAdjacentTiles(int row, int col) const {
     }
     return adjacentTiles;    
 }
+
+
+
+
+String Map::getCharRepresentation()
+{
+    String mapString = "";
+    for (int row = 0; row < Rows; ++row) {
+        for (int col = 0; col < Columns; ++col) {
+            char tileChar;
+            switch (tiles[row][col].type) {
+                case Tile::TileType::Path:
+                    tileChar = ' ';
+                    break;
+                case Tile::TileType::Wall:
+                    tileChar = '#';
+                    break;
+                case Tile::TileType::Fire:
+                    tileChar = 'F';
+                    break;
+                case Tile::TileType::FireFighter:
+                    tileChar = 'P';
+                    break;
+                case Tile::TileType::HasVictim:
+                    tileChar = 'V';
+                    break;
+                case Tile::TileType::HasHazard:
+                    tileChar = 'H';
+                    break;
+                case Tile::TileType::Smokey:
+                    tileChar = 'S';
+                    break;
+                default:
+                    tileChar = '?';
+                    break;
+            }
+            mapString += tileChar;
+        }
+        mapString += "\n";
+    }
+    return mapString;
+}
+
+String Map::getRowCharRepresentation(int row)
+{
+    String rowString = "";
+    for (int col = 0; col < Columns; ++col) {
+        char tileChar;
+        switch (tiles[row][col].type) {
+            case Tile::TileType::Path:
+                tileChar = ' ';
+                break;
+            case Tile::TileType::Wall:
+                tileChar = '#';
+                break;
+            case Tile::TileType::Fire:
+                tileChar = 'F';
+                break;
+            case Tile::TileType::FireFighter:
+                tileChar = 'P';
+                break;
+            case Tile::TileType::HasVictim:
+                tileChar = 'V';
+                break;
+            case Tile::TileType::HasHazard:
+                tileChar = 'H';
+                break;
+            case Tile::TileType::Smokey:
+                tileChar = 'S';
+                break;
+            default:
+                tileChar = '?';
+                break;
+        }
+        rowString += tileChar;
+    }
+    return rowString;
+}

@@ -24,6 +24,8 @@ public:
     std::vector<Tile> getValidSpawnLocations() const;
     std::vector<Tile> getAdjacentPathTiles(int row, int col) const;
     std::vector<Tile> getAdjacentTiles(int row, int col) const;
+    String getCharRepresentation(); 
+    String getRowCharRepresentation(int row);
 };
 
 #endif

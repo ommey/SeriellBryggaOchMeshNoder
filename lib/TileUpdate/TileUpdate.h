@@ -6,11 +6,14 @@
 
 struct TileUpdate
     {
-        String Command = "Tile";
-        int Row;
-        int Column;
-        String Type;
-        TileUpdate(int row, int column, String type) : Row(row), Column(column), Type(type) {}
+        String Command = "";
+        int Row = 0;
+        int Column = 0;
+        int NewX = 0;
+        int NewY = 0;
+        String Type ="";
+        TileUpdate(int x, int y, int newX, int newY, String type, String command) : Row(y), Column(x),  NewX(newX), NewY(newY), Type(type), Command(command){}
+        TileUpdate(int x, int y, String type, String command) : Row(y), Column(x), Type(type), Command(command){}
         String ToJson()
         {
             StaticJsonDocument<256> doc;
@@ -18,12 +21,14 @@ struct TileUpdate
             doc["Row"] = Row;
             doc["Column"] = Column;
             doc["Type"] = Type;
+            doc["NewRow"] = NewX;
+            doc["NewColumn"] = NewY;
             String json;
             serializeJson(doc, json);
             return json;
         }
     };
-struct moveTileUpdate
+/*struct moveTileUpdate
 {
     String Command = "MoveTile";
     int X;
@@ -45,7 +50,7 @@ struct moveTileUpdate
         serializeJson(doc, json);
         return json;
     }
-};
+};*/
 
 
 #endif

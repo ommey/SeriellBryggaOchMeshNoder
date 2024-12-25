@@ -33,6 +33,7 @@ public:
 
     enum commandsToReceive{
         NewMap,
+        MoveTile,
         Tile,
         Reset,
         Go,
