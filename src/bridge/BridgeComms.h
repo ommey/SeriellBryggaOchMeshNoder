@@ -7,6 +7,7 @@
 #include "namedMesh.h"
 #include <ArduinoJson.h>
 #include "BridgeScene.h"
+#include "TileUpdate.h"
 
 #define   MESH_SSID       "OmarsSexigaNätverk"
 #define   MESH_PASSWORD   "Porr2Porr"

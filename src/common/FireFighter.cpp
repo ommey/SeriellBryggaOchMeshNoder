@@ -54,23 +54,69 @@ void FireFighter::reset()
     }
 }
 
+void FireFighter::spawnFireFighter()
+{
+    std::vector<Tile> validSpawnLocations = map->getValidSpawnLocations();
+    if (!validSpawnLocations.empty()) {
+        randomSeed(millis());  
+        int randomIndex = random(0, validSpawnLocations.size());
+        Tile randomTile = validSpawnLocations[randomIndex];
+        this->x = randomTile.Row;
+        this->y = randomTile.Column;
+        updateTile(randomTile.Row, randomTile.Column, Tile::TileType::FireFighter);
+    }
+}
+
+void FireFighter::moveFireFighter()
+{
+    std::vector<Tile> validMoveLocations = map->getAdjacentTiles(x, y);
+    if (!validMoveLocations.empty()) {
+        randomSeed(millis());  
+        int randomIndex = random(0, validMoveLocations.size());
+        Tile randomTile = validMoveLocations[randomIndex];
+        moveTile(x, y, randomTile.Row, randomTile.Column, Tile::TileType::FireFighter);
+        x = randomTile.Row;
+        y = randomTile.Column;
+    }
+    
+}
+
+void FireFighter::moveFireFighter(int newX, int newY)
+{
+    moveTileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(Tile::TileType::FireFighter));
+    enqueueMeshOutput(moveTileUpdate.ToJson());
+}
+
+void FireFighter::updateTile(int row, int column, Tile::TileType type)
+{
+    TileUpdate tileUpdate(row, column, Tile::typeToString(type));
+    enqueueMeshOutput(tileUpdate.ToJson());
+}
+
+void FireFighter::moveTile(int x, int y, int newX, int newY, Tile::TileType type)
+{
+    moveTileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(type));
+    enqueueMeshOutput(moveTileUpdate.ToJson());
+}
+
 void FireFighter::FireFighterTask(void *pvParameters)
 {
     FireFighter* fireFighter = static_cast<FireFighter*>(pvParameters);
-    while (1)
+    while (fireFighter->map->isCreated())
     {
-        fireFighter->enqueueSerialOutput("FireFighterTask going strong" + String(millis()));
-        if(fireFighter->map != nullptr)
+        fireFighter->spawnFireFighter();
+        //fireFighter->enqueueSerialOutput("Im working with map: " + String(fireFighter->map->Rows) + ", " + String(fireFighter->map->Columns));
+        while (1)
         {
-            fireFighter->enqueueSerialOutput("Im working with map: " + String(fireFighter->map->Rows) + ", " + String(fireFighter->map->Columns));
+            fireFighter->enqueueSerialOutput("FireFighterTask going strong" + String(millis()));
+            fireFighter->moveFireFighter();
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-        else 
-        {
-            fireFighter->enqueueMeshOutput("No map to work with");
-        }
+                
+         
+                
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    
 }
 
 void FireFighter::enqueueSerialOutput(const String &msg)

@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include "Map.h"
+#include <random>
+#include "TileUpdate.h"
 
 class FireFighter{
 
@@ -30,6 +32,13 @@ void registerMap(Map* map);
 
 void start();
 void reset();
+
+void spawnFireFighter();
+void moveFireFighter(int newX, int newY);
+void moveFireFighter();
+
+void updateTile(int x, int y, Tile::TileType type);
+void moveTile(int x, int y, int newX, int newY, Tile::TileType type);
 
 
 

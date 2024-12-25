@@ -2,26 +2,6 @@
 
 Scene::Scene() : map(Map()), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
-struct TileUpdate
-    {
-        String Command = "Tile";
-        int Row;
-        int Column;
-        String Type;
-        TileUpdate(int row, int column, String type) : Row(row), Column(column), Type(type) {}
-        String ToJson()
-        {
-            StaticJsonDocument<256> doc;
-            doc["Command"] = Command;
-            doc["Row"] = Row;
-            doc["Column"] = Column;
-            doc["Type"] = Type;
-            String json;
-            serializeJson(doc, json);
-            return json;
-        }
-    };
-
 void Scene::registerSerialQueue(QueueHandle_t* serialQueue)
 {
     this->sceneSerialQueue = serialQueue;

@@ -21,6 +21,8 @@ public:
     void createMap(int rows, int columns);
     void updateTile(int row, int column, Tile::TileType type);
     void incrementFireSpread();
+    std::vector<Tile> getValidSpawnLocations() const;
+    std::vector<Tile> getAdjacentPathTiles(int row, int col) const;
     std::vector<Tile> getAdjacentTiles(int row, int col) const;
 };
 

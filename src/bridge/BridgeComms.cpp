@@ -15,7 +15,7 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
 
 
     mesh.onReceive([this](String &from, String &msg) {
-    this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+    this->enqueueSerialOutput(msg);
     });
 
       mesh.onChangedConnections([this]() {
