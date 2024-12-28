@@ -15,7 +15,7 @@
 
 class Comms {
 private:
-    String nodeName = "Bridge";
+    String nodeName;
     Scene* scene;
     FireFighter* fireFighter;
     namedMesh mesh;
