@@ -36,6 +36,7 @@ public:
         Tile,
         Reset,
         Go,
+        MoveTile
     };
 
     commandsToReceive stringToCommand(const String& command);

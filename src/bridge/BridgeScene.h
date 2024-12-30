@@ -6,6 +6,7 @@
 #include "Tile.h"
 #include <ArduinoJson.h>
 #include "MapUpdate.h"
+#include "TileUpdate.h"
 
 
 
@@ -38,6 +39,8 @@ class BridgeScene {
         void createNewMap(int rows, int columns);
 
         void enqueueMapUpdate(int row, int column, Tile::TileType type);
+        
+        void enqueueTileMovement(int oldRow, int oldColumn, int newRow, int newColumn);
 
         void openTileUpdates();
 

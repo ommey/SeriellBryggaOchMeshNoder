@@ -74,29 +74,41 @@ void FireFighter::moveFireFighter()
         randomSeed(millis());  
         int randomIndex = random(0, validMoveLocations.size());
         Tile randomTile = validMoveLocations[randomIndex];
-        moveTile(x, y, randomTile.Row, randomTile.Column, Tile::TileType::FireFighter);
-        x = randomTile.Row;
-        y = randomTile.Column;
+        moveTile(x, y, randomTile.Row, randomTile.Column);
+        enqueueSerialOutput("FireFighter moved to: " + String(randomTile.Row) + ", " + String(randomTile.Column) + " from: " + String(x) + ", " + String(y));
+        this->x = randomTile.Row;
+        this->y = randomTile.Column;
     }
     
 }
 
-void FireFighter::moveFireFighter(int newX, int newY)
-{
-    TileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(Tile::TileType::FireFighter), "MoveTile");
-    enqueueMeshOutput(moveTileUpdate.ToJson());
-}
 
 void FireFighter::updateTile(int row, int column, Tile::TileType type)
 {
-    TileUpdate tileUpdate(row, column, Tile::typeToString(type), "Tile");
+    TileUpdate tileUpdate(row, column, Tile::typeToString(type));
+    enqueueSerialOutput("sending via mesh " + tileUpdate.ToJson());
     enqueueMeshOutput(tileUpdate.ToJson());
+   /* TileUpdate tileUpdate(row, column, Tile::typeToString(type), "Tile");
+    enqueueMeshOutput(tileUpdate.ToJson());
+    */
 }
 
-void FireFighter::moveTile(int x, int y, int newX, int newY, Tile::TileType type)
+void FireFighter::moveTile(int x, int y, int newX, int newY)
 {
+    TileUpdate tileUpdate(x, y, newX, newY);
+    enqueueSerialOutput("sending via mesh " + tileUpdate.ToJson());
+    enqueueMeshOutput(tileUpdate.ToJson());
+    /*
     TileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(type), "MoveTile");
-    enqueueMeshOutput(moveTileUpdate.ToJson());
+    enqueueMeshOutput(moveTileUpdate.ToJson()); */
+}
+
+void FireFighter::moveFireFighter(int newX, int newY)
+{
+    moveTile(x, y, newX, newY);
+    
+    /*TileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(Tile::TileType::FireFighter), "MoveTile");
+    enqueueMeshOutput(moveTileUpdate.ToJson());*/
 }
 
 void FireFighter::FireFighterTask(void *pvParameters)
@@ -111,10 +123,14 @@ void FireFighter::FireFighterTask(void *pvParameters)
             fireFighter->enqueueSerialOutput("FireFighterTask going strong" + String(millis()));
             fireFighter->moveFireFighter();
             vTaskDelay(1000 / portTICK_PERIOD_MS);
-            for (int i = 0; i < fireFighter->map->Rows; i++)
+            
+            
+            
+            
+            /*for (int i = 0; i < fireFighter->map->Rows; i++)
             {
                 fireFighter->enqueueSerialOutput(fireFighter->map->getRowCharRepresentation(i));
-            }
+            }*/
             
             
         }

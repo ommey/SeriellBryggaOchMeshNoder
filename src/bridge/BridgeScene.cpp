@@ -2,26 +2,6 @@
 
 BridgeScene::BridgeScene() : map(Map()), sceneSerialQueue(nullptr), sceneMeshQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
-struct TileUpdate
-    {
-        String Command = "Tile";
-        int Row;
-        int Column;
-        String Type;
-        TileUpdate(int row, int column, String type) : Row(row), Column(column), Type(type) {}
-        String ToJson()
-        {
-            StaticJsonDocument<256> doc;
-            doc["Command"] = Command;
-            doc["Row"] = Row;
-            doc["Column"] = Column;
-            doc["Type"] = Type;
-            String json;
-            serializeJson(doc, json);
-            return json;
-        }
-    };
-
 void BridgeScene::registerSerialQueue(QueueHandle_t* serialQueue)
 {
     this->sceneSerialQueue = serialQueue;
@@ -91,6 +71,18 @@ void BridgeScene::enqueueMapUpdate(int row, int column, Tile::TileType type)
             }
 }
 
+void BridgeScene::enqueueTileMovement(int oldRow, int oldColumn, int newRow, int newColumn)
+{
+    if (!map.isCreated())
+            {
+                sceneToSerial("No map to update");
+                return;
+            }
+            enqueueMapUpdate(newRow, newColumn, map.tiles[oldRow][oldColumn].type);
+            //enqueueMapUpdate(oldRow, oldColumn, Tile::TileType::Path);
+
+}
+
 
 
 void BridgeScene::tileUpdateTask(void *p)
@@ -133,9 +125,21 @@ void BridgeScene::mapHandlerTask(void *p)
          scene->internMapUpdate(); 
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay for periodic processing
-        }
-
     }
+
+}
+
+
+    /*void BridgeScene::moveTile(int oldRow, int oldColumn, int newRow, int newColumn, Tile::TileType type)
+    {
+    TileUpdate moveTileUpdate(oldRow, oldColumn, newRow, newColumn);
+    //för GUI uppdatering
+    sceneToSerial(moveTileUpdate.ToJson());
+    //för klienter
+    sceneToMesh(moveTileUpdate.ToJson());
+    //internt
+    map.moveTile(oldRow, oldColumn, newRow, newColumn, type);
+    }*/
 
     void BridgeScene::updateTile(int row, int column, Tile::TileType type)
     {

@@ -25,12 +25,17 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
         }
         else
         {
+            enqueueSerialOutput("Received message from mesh: " + msg);
             switch(this->stringToCommand(doc["Command"]))
             {
                 case Tile:
                     this->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
+                    this->enqueueSerialOutput(msg);
+                    this->enqueueSerialOutput("received tileupdate from mesh");
                     break;
                 case MoveTile:
+                    this->scene->enqueueTileMovement(doc["OldRow"], doc["OldColumn"], doc["Row"], doc["Column"]);
+                    this->enqueueSerialOutput(msg);
                     break;
             }
         }
@@ -147,6 +152,12 @@ struct CommandToGui
                         // todo be branmän att starta om
                         comms->enqueueMeshOutput(msg);
                         break;
+                    case commandsToReceive::MoveTile:
+
+                        comms->scene->enqueueTileMovement(doc["OldRow"], doc["OldColumn"], doc["Row"], doc["Column"]);
+                        comms->enqueueSerialOutput(msg);
+                        break;
+
                     default:
                         break;
                     }
@@ -179,6 +190,9 @@ BridgeComms::commandsToReceive BridgeComms::stringToCommand(const String &comman
     }
     else if (command == "Go"){
         return Go;
+    }
+    else if (command == "MoveTile"){
+        return MoveTile;
     }
     else{
         return Reset;

@@ -94,7 +94,7 @@ void Scene::mapHandlerTask(void *p)
 
     void Scene::updateTile(int row, int column, Tile::TileType type)
     {
-    TileUpdate tileUpdate(row, column, Tile::typeToString(type), "Tile");
+    TileUpdate tileUpdate(row, column, Tile::typeToString(type));
     sceneToSerial(tileUpdate.ToJson());
     //internt i klienten
     map.updateTile(row, column, type);

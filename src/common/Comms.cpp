@@ -163,6 +163,8 @@ void Comms::serialWriteTask(void *pvParameters)
                             commandToGui.Command = "Reset";
                             comms->enqueueSerialOutput(commandToGui.ToJson());
                             break;
+                        case commandsToReceive::MoveTile:
+                        break;
                         default:
                             break;
                         }
@@ -196,6 +198,9 @@ void Comms::serialWriteTask(void *pvParameters)
         }
         else if (command == "Go"){
             return Go;
+        }
+        else if (command == "MoveTile"){
+            return MoveTile;
         }
         else{
             return Reset;

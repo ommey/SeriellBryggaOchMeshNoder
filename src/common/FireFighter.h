@@ -38,7 +38,7 @@ void moveFireFighter(int newX, int newY);
 void moveFireFighter();
 
 void updateTile(int x, int y, Tile::TileType type);
-void moveTile(int x, int y, int newX, int newY, Tile::TileType type);
+void moveTile(int x, int y, int newX, int newY);
 
 
 
