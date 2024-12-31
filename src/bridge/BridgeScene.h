@@ -6,14 +6,16 @@
 #include "Tile.h"
 #include <ArduinoJson.h>
 #include "MapUpdate.h"
+#include "TileUpdate.h"
 
 
 
 class BridgeScene {
     private:
-        Map* map;
+        Map map;
         //Comms* comms;
         QueueHandle_t* sceneSerialQueue;
+        QueueHandle_t* sceneMeshQueue;
         QueueHandle_t sceneUpdateQueue;
         TaskHandle_t mapHandlerTaskHandle;
         TaskHandle_t tileUpdateTaskHandle;
@@ -28,11 +30,17 @@ class BridgeScene {
 
         void registerSerialQueue(QueueHandle_t* serialQueue);
 
-        void sceneToComms(const String& msg);
+        void registerMeshQueue(QueueHandle_t* meshQueue);
+
+        void sceneToSerial(const String& msg);
+
+        void sceneToMesh(const String& msg);
         
         void createNewMap(int rows, int columns);
 
         void enqueueMapUpdate(int row, int column, Tile::TileType type);
+        
+        void enqueueTileMovement(int oldRow, int oldColumn, int newRow, int newColumn);
 
         void openTileUpdates();
 

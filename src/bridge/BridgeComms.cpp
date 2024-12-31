@@ -15,12 +15,37 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
 
 
     mesh.onReceive([this](String &from, String &msg) {
-    this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
-    });
+    //this->enqueueSerialOutput(msg);
+    if (msg.startsWith("{") && msg.endsWith("}"))
+    {
+        StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, msg);
+        if (error) {
+            this->enqueueSerialOutput("Failed to parse JSON");
+        }
+        else
+        {
+            //enqueueSerialOutput("Received message from mesh: " + msg);
+            switch(this->stringToCommand(doc["Command"]))
+            {
+                case Tile:
+                    this->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
+                    this->enqueueSerialOutput(msg);
+                    this->enqueueSerialOutput("received tileupdate from mesh");
+                    break;
+                case MoveTile:
+                    this->scene->enqueueTileMovement(doc["OldRow"], doc["OldColumn"], doc["Row"], doc["Column"]);
+                    this->enqueueSerialOutput(msg);
+                    break;
+            }
+        }
+    } 
+    });        
 
-      mesh.onChangedConnections([this]() {
+    mesh.onChangedConnections([this]() {
     this->enqueueSerialOutput("Mesh message: Changed connection");
     });
+    
 }
     
 void BridgeComms::meshUpdate(void *pvParameters)
@@ -128,6 +153,12 @@ struct CommandToGui
                         // todo be branmän att starta om
                         comms->enqueueMeshOutput(msg);
                         break;
+                    case commandsToReceive::MoveTile:
+
+                        comms->scene->enqueueTileMovement(doc["OldRow"], doc["OldColumn"], doc["Row"], doc["Column"]);
+                        comms->enqueueSerialOutput(msg);
+                        break;
+
                     default:
                         break;
                     }
@@ -161,6 +192,9 @@ BridgeComms::commandsToReceive BridgeComms::stringToCommand(const String &comman
     else if (command == "Go"){
         return Go;
     }
+    else if (command == "MoveTile"){
+        return MoveTile;
+    }
     else{
         return Reset;
     }
@@ -179,16 +213,16 @@ BridgeComms::~BridgeComms()
 
 void BridgeComms::start()
 {
-    if (xTaskCreate(meshUpdate, "meshUpdate", 5000, this, 1, NULL) != pdPASS) {
+    if (xTaskCreate(meshUpdate, "meshUpdate", 4096, this, 1, NULL) != pdPASS) {
         Serial.println("Failed to create meshUpdate task");
     }
-    if (xTaskCreate(serialWriteTask, "serialWriteTask", 5000, this, 1, NULL) != pdPASS) {
+    if (xTaskCreate(serialWriteTask, "serialWriteTask", 2048, this, 1, NULL) != pdPASS) {
         Serial.println("Failed to create serialWriteTask");
     }
-    if (xTaskCreate(serialReadTask, "serialReadTask", 5000, this, 1, NULL) != pdPASS) {
+    if (xTaskCreate(serialReadTask, "serialReadTask", 2048, this, 1, NULL) != pdPASS) {
         Serial.println("Failed to create serialReadTask");
     }
-    if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 5000, this, 1, NULL) != pdPASS) {
+    if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 4096, this, 1, NULL) != pdPASS) {
         Serial.println("Failed to create meshBroadCastTask");
     }
 }

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "Scene.h"
 #include "Comms.h"
+#include "FireFighter.h"
 
 
 
@@ -8,7 +9,11 @@
 void setup() {
     delay(1000);
     static Scene scene;
-    static Comms comms(&scene);
+    static FireFighter fireFighter;
+    static Comms comms(&scene, &fireFighter);
+    fireFighter.registerSerialOutput(&comms.serialOutPutQueue);
+    fireFighter.registerMeshOutput(&comms.meshOutputQueue);
+    fireFighter.registerMap(&scene.map);
     scene.registerSerialQueue(&comms.serialOutPutQueue);
     comms.start();
     comms.enqueueSerialOutput("Just started");

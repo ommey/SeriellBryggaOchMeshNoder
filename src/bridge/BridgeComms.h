@@ -7,6 +7,7 @@
 #include "namedMesh.h"
 #include <ArduinoJson.h>
 #include "BridgeScene.h"
+#include "TileUpdate.h"
 
 #define   MESH_SSID       "OmarsSexigaNätverk"
 #define   MESH_PASSWORD   "Porr2Porr"
@@ -17,7 +18,6 @@ private:
     String nodeName = "Bridge";
     BridgeScene* scene;
     namedMesh mesh;
-    QueueHandle_t meshOutputQueue;
 
 static void meshUpdate(void* pvParameters);
 
@@ -29,12 +29,14 @@ static void serialReadTask(void* pvParameters);
 
 public:
     QueueHandle_t serialOutPutQueue;
+    QueueHandle_t meshOutputQueue;
 
     enum commandsToReceive{
         NewMap,
+        MoveTile,
         Tile,
         Reset,
-        Go,
+        Go
     };
 
     commandsToReceive stringToCommand(const String& command);
@@ -50,6 +52,7 @@ public:
     void enqueueMeshOutput(const String& msg);
 
     void enqueueSerialOutput(const String& msg);
+
 };
 
 

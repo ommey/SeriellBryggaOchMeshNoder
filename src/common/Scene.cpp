@@ -1,33 +1,13 @@
 #include "Scene.h"
 
-Scene::Scene() : map(nullptr), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
-
-struct TileUpdate
-    {
-        String Command = "Tile";
-        int Row;
-        int Column;
-        String Type;
-        TileUpdate(int row, int column, String type) : Row(row), Column(column), Type(type) {}
-        String ToJson()
-        {
-            StaticJsonDocument<256> doc;
-            doc["Command"] = Command;
-            doc["Row"] = Row;
-            doc["Column"] = Column;
-            doc["Type"] = Type;
-            String json;
-            serializeJson(doc, json);
-            return json;
-        }
-    };
+Scene::Scene() : map(Map()), sceneSerialQueue(nullptr), /*comms(nullptr),*/ sceneUpdateQueue(xQueueCreate(1024, sizeof(MapUpdate))){}
 
 void Scene::registerSerialQueue(QueueHandle_t* serialQueue)
 {
     this->sceneSerialQueue = serialQueue;
 }
 
-void Scene::sceneToComms(const String &msg)
+void Scene::sceneToSerial(const String &msg)
 {
     if (sceneSerialQueue)
     {
@@ -49,19 +29,15 @@ void Scene::sceneToComms(const String &msg)
 
 void Scene::createNewMap(int rows, int columns)
 {
-    if (map != nullptr)
-    {
-        delete map;
-    }
-    map = new Map(rows, columns);
-    sceneToComms("Created new map" + String(rows) + "x" + String(columns));
+    map.createMap(rows, columns);
+    sceneToSerial("Created new map" + String(rows) + "x" + String(columns));
 }
 
 void Scene::enqueueMapUpdate(int row, int column, Tile::TileType type)
 {
-    if (!map)
+    if (!map.isCreated())
             {
-                sceneToComms("No map to update");
+                sceneToSerial("No map to update");
                 return;
             }
             MapUpdate mapUpdate = {row, column, type};
@@ -77,23 +53,23 @@ void Scene::tileUpdateTask(void *p)
     Scene* scene = static_cast<Scene*>(p);
     MapUpdate mapUpdate;
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
 
         if (xQueueReceive(scene->sceneUpdateQueue, &mapUpdate, 0) == pdPASS) // Non-blocking
         {
-            if (scene->map)
+            if (scene->map.isCreated())
             {
-                scene->map->updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
+                scene->map.updateTile(mapUpdate.row, mapUpdate.column, mapUpdate.type);
                 
 
-                //scene->sceneToComms("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
+                //scene->sceneToSerial("Server updated tile (" + String(mapUpdate.row) + ", " + String(mapUpdate.column) + ") to "+ Tile::typeToString(mapUpdate.type) +" from gui");
                        
             }
             else
             {
                 Serial.println("No map to update");
-                //scene->sceneToComms("No map to update");
+                //scene->sceneToSerial("No map to update");
             }
         }
         vTaskDelay(50 / portTICK_PERIOD_MS); // Delay for periodic processing
@@ -104,10 +80,10 @@ void Scene::mapHandlerTask(void *p)
 {
     Scene* scene = static_cast<Scene*>(p);
 
-    while (scene->map)
+    while (scene->map.isCreated())
     {
         // Perform periodic handling logic
-        if (scene->map)
+        if (scene->map.isCreated())
         {              
          scene->internMapUpdate(); 
         }
@@ -118,102 +94,21 @@ void Scene::mapHandlerTask(void *p)
 
     void Scene::updateTile(int row, int column, Tile::TileType type)
     {
-    //för servern
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
-    sceneToComms(tileUpdate.ToJson());
-    //internt i servern
-    map->updateTile(row, column, type);
+    sceneToSerial(tileUpdate.ToJson());
+    //internt i klienten
+    map.updateTile(row, column, type);
     //för klienten
     }
 
     void Scene::internMapUpdate()
     {
-        map->incrementFireSpread();
-          for(int r = 0; r < map->Rows; r++)
-            {
-                for(int c = 0; c < map->Columns; c++)
-                {
-                    switch (map->tiles[r][c].type)
-                    {
-                    case Tile::TileType::Path:
-                        
-                        break;
-                    case Tile::TileType::Wall:
-                        
-                        break;
-                    case Tile::TileType::Smokey:
-                        for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type == Tile::TileType::Fire)
-                                {
-                                updateTile(r, c, Tile::TileType::Fire);
-                                break;
-                                }  
-                        }
-                        break;
-                    case Tile::TileType::Fire:
-                        if (map->fireSpreadMap[r][c] > 5)
-                        {
-                            map->fireSpreadMap[r][c] = 0;
-                            for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type != Tile::TileType::Fire && tile.type != Tile::TileType::Wall)
-                                {
-                                updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
-                                break;
-                                }
-                                
-                            }
-                        }
-                        
-                        /*for(Tile tile : map->getAdjacentTiles(r, c))
-                        {
-                            if (map->fireSpreadMap[r][c] > 5)
-                            {
-                                updateTile
-                            }
-                        }*/
-                        break;
-                    case Tile::TileType::HasVictim:
-                        
-                        break;
-                    case Tile::TileType::HasHazard:
-                        {
-                        bool hasAdjacentFire = false;
-                        for (Tile tile : map->getAdjacentTiles(r, c))
-                        {
-                            if (tile.type == Tile::TileType::Fire)
-                            {
-                                hasAdjacentFire = true;
-                                break; // räcker med att en av granntilar är i brand
-                            }
-                        }
-                        if (hasAdjacentFire)
-                        {
-                            for (Tile tile : map->getAdjacentTiles(r, c))
-                            {
-                                if (tile.type != Tile::TileType::Wall && tile.type != Tile::TileType::Fire)
-                                {
-                                    updateTile(tile.Row, tile.Column, Tile::TileType::Fire);
-                                    //vTaskDelay(15 / portTICK_PERIOD_MS); // Optional: Spread with delay
-                                }
-                            }
-                        }
-                    }
-                    break;
-                    case Tile::TileType::FireFighter:
-                        
-                        break;
-                    default:
-                        break;
-                    }
-                }
-            }
+        return;
     }
 
 void Scene::openTileUpdates()
 {
-    sceneToComms("Opening tile updates...");
+    sceneToSerial("Opening tile updates...");
     if (tileUpdateTaskHandle == NULL)
     {
     if (xTaskCreate(tileUpdateTask, "tileUpdateTask", 5000, this, 1, &tileUpdateTaskHandle) != pdPASS) {
@@ -223,13 +118,12 @@ void Scene::openTileUpdates()
     else
     {
         Serial.println("Task already running");
-        
     }
 }
 
 void Scene::start()
 {
-    sceneToComms("Starting sceneHandling...");
+    sceneToSerial("Starting sceneHandling...");
     if (mapHandlerTaskHandle == NULL)
     {
     if (xTaskCreate(mapHandlerTask, "mapHandlerTask", 5000, this, 1, &mapHandlerTaskHandle) != pdPASS) {
@@ -244,20 +138,20 @@ void Scene::start()
 
 Scene::~Scene()
 {
-    if (map)
+    if (map.isCreated())
     {
-        delete map;
+        map.createMap(0, 0);
     }
     vQueueDelete(sceneUpdateQueue);
+
 }
 
 void Scene::reset()
 {
-    sceneToComms("Sceme Reset...");
-    if (map)
+    sceneToSerial("Sceme Reset...");
+    if (map.isCreated())
     {
-        delete map;
-        map = nullptr;
+        map.createMap(0, 0);
     }
     if (mapHandlerTaskHandle != NULL)
     {

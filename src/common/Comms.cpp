@@ -2,7 +2,7 @@
 
 
 
-Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(201, sizeof(char) * 256)) 
+Comms::Comms(Scene *scene, FireFighter* fireFighter) : scene(scene), fireFighter(fireFighter), serialOutPutQueue(xQueueCreate(201, sizeof(char) * 256)), meshOutputQueue(xQueueCreate(201, sizeof(char) * 256)) 
 {
     Serial.begin(115200);
     Serial.setTimeout(50);
@@ -16,12 +16,64 @@ Comms::Comms(Scene *scene) : scene(scene), serialOutPutQueue(xQueueCreate(201, s
 
 
     mesh.onReceive([this](String &from, String &msg) {
-    this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+    
+    if (from == "Bridge")
+    {
+        if (msg.startsWith("{") && msg.endsWith("}"))
+        {
+            StaticJsonDocument<256> doc;
+            DeserializationError error = deserializeJson(doc, msg);
+            if (error) {
+                this->enqueueSerialOutput("Failed to parse JSON");
+            }
+            else
+            {
+                switch(this->stringToCommand(doc["Command"]))
+                {
+                    case NewMap:
+                        this->scene->reset();
+                        this->scene->createNewMap(doc["Rows"], doc["Columns"]);
+                        this->scene->openTileUpdates();
+                        break;
+                    case Tile:
+                        this->scene->enqueueMapUpdate(doc["Row"], doc["Column"], Tile::stringToType(doc["Type"]));
+                        break;
+                    case Go:
+                        this->scene->start();
+                        this->fireFighter->start();
+                        break;
+                    case Reset:
+                        this->scene->reset();
+                        this->fireFighter->reset();
+                        break;
+                    default:
+                        break;
+                    
+                }
+                //this->enqueueSerialOutput("command from Bridge received");
+            }
+        }
+        else
+        {
+            this->enqueueSerialOutput("Mesh message, from: " + from + ": " + msg);
+        }
+        
+    }
+    
     });
 
       mesh.onChangedConnections([this]() {
     Serial.printf("Changed connection\n");
     });
+
+    mesh.onDroppedConnection([this](size_t nodeId) {
+        enqueueSerialOutput("Dropped connection: " + String(nodeId));
+        this->fireFighter->reset();
+        this->scene->reset();
+    });
+
+
+
 }
     
 void Comms::meshUpdate(void *pvParameters)
@@ -120,6 +172,8 @@ void Comms::serialWriteTask(void *pvParameters)
                             commandToGui.Command = "Reset";
                             comms->enqueueSerialOutput(commandToGui.ToJson());
                             break;
+                        case commandsToReceive::MoveTile:
+                        break;
                         default:
                             break;
                         }
@@ -154,6 +208,9 @@ void Comms::serialWriteTask(void *pvParameters)
         else if (command == "Go"){
             return Go;
         }
+        else if (command == "MoveTile"){
+            return MoveTile;
+        }
         else{
             return Reset;
         }
@@ -172,16 +229,16 @@ void Comms::serialWriteTask(void *pvParameters)
 
     void Comms::start()
     {
-        if (xTaskCreate(meshUpdate, "meshUpdate", 5000, this, 1, NULL) != pdPASS) {
+        if (xTaskCreate(meshUpdate, "meshUpdate", 4096, this, 1, NULL) != pdPASS) {
             Serial.println("Failed to create meshUpdate task");
         }
-        if (xTaskCreate(serialWriteTask, "serialWriteTask", 5000, this, 1, NULL) != pdPASS) {
+        if (xTaskCreate(serialWriteTask, "serialWriteTask", 2048, this, 1, NULL) != pdPASS) {
             Serial.println("Failed to create serialWriteTask");
         }
-        if (xTaskCreate(serialReadTask, "serialReadTask", 5000, this, 1, NULL) != pdPASS) {
+        if (xTaskCreate(serialReadTask, "serialReadTask", 2048, this, 1, NULL) != pdPASS) {
             Serial.println("Failed to create serialReadTask");
         }
-        if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 5000, this, 1, NULL) != pdPASS) {
+        if (xTaskCreate(meshBroadCastTask, "meshBroadCastTask", 4096, this, 1, NULL) != pdPASS) {
             Serial.println("Failed to create meshBroadCastTask");
         }
     }
@@ -206,4 +263,9 @@ void Comms::serialWriteTask(void *pvParameters)
                 Serial.println("Failed to add to serial queue");
             }
         }
+    }
+
+    String Comms::getID()
+    {
+        return String(mesh.getNodeId());
     }

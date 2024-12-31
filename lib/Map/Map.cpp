@@ -1,8 +1,15 @@
 #include "Map.h"
 #include <stdexcept>
 
-Map::Map(int rows, int columns) : Rows(rows), Columns(columns) {
-    // Initialize 2D vectors with default values
+
+Map::Map() : Rows(0), Columns(0), tiles(), fireSpreadMap()
+{
+}
+
+void Map::createMap(int rows, int columns)
+{    
+    Rows = rows;
+    Columns = columns;
     tiles = std::vector<std::vector<Tile>>(Rows, std::vector<Tile>(Columns));
     fireSpreadMap = std::vector<std::vector<int>>(Rows, std::vector<int>(Columns, 0));
 
@@ -11,11 +18,10 @@ Map::Map(int rows, int columns) : Rows(rows), Columns(columns) {
             tiles[row][col] = Tile(row, col, Tile::TileType::Path);
         }
     }
-    
-
 }
 
-void Map::updateTile(int row, int column, Tile::TileType type) {
+void Map::updateTile(int row, int column, Tile::TileType type)
+{
     // Validate indices
     if (row < 0 || row >= Rows || column < 0 || column >= Columns) {
         throw std::out_of_range("Invalid row or column index");
@@ -41,6 +47,57 @@ for (int row = 0; row < Rows; ++row) {
 
 }
 
+std::vector<Tile> Map::getValidSpawnLocations() const
+{
+    std::vector<Tile> edgePathTiles;
+
+    if (!isCreated()) {
+        return edgePathTiles; // Return empty if the map isn't created
+    }
+
+    // Iterate over the top and bottom rows
+    for (int col = 0; col < Columns; ++col) {
+        // Top row
+        if (tiles[0][col].type == Tile::TileType::Path) {
+            edgePathTiles.push_back(tiles[0][col]);
+        }
+        // Bottom row
+        if (tiles[Rows - 1][col].type == Tile::TileType::Path) {
+            edgePathTiles.push_back(tiles[Rows - 1][col]);
+        }
+    }
+
+    // Iterate over the left and right columns (excluding corners as they're already added)
+    for (int row = 1; row < Rows - 1; ++row) {
+        // Left column
+        if (tiles[row][0].type == Tile::TileType::Path) {
+            edgePathTiles.push_back(tiles[row][0]);
+        }
+        // Right column
+        if (tiles[row][Columns - 1].type == Tile::TileType::Path) {
+            edgePathTiles.push_back(tiles[row][Columns - 1]);
+        }
+    }
+    return edgePathTiles;
+}
+
+std::vector<Tile> Map::getAdjacentPathTiles(int row, int col) const 
+{
+    std::vector<Tile> adjacentPathTiles;
+    for (int i = -1; i <= 1; ++i) {
+        for (int j = -1; j <= 1; ++j) {
+            int newRow = row + i;
+            int newCol = col + j;
+            if (newRow >= 0 && newRow < Rows && newCol >= 0 && newCol < Columns) {
+                if (tiles[newRow][newCol].type == Tile::TileType::Path) {
+                    adjacentPathTiles.push_back(tiles[newRow][newCol]);
+                }
+            }
+        }
+    }
+    return adjacentPathTiles;
+}
+
 std::vector<Tile> Map::getAdjacentTiles(int row, int col) const {
     std::vector<Tile>adjacentTiles;
     for (int i = -1; i <= 1; ++i) {
@@ -53,4 +110,82 @@ std::vector<Tile> Map::getAdjacentTiles(int row, int col) const {
         }
     }
     return adjacentTiles;    
+}
+
+
+
+
+String Map::getCharRepresentation()
+{
+    String mapString = "";
+    for (int row = 0; row < Rows; ++row) {
+        for (int col = 0; col < Columns; ++col) {
+            char tileChar;
+            switch (tiles[row][col].type) {
+                case Tile::TileType::Path:
+                    tileChar = ' ';
+                    break;
+                case Tile::TileType::Wall:
+                    tileChar = '#';
+                    break;
+                case Tile::TileType::Fire:
+                    tileChar = 'F';
+                    break;
+                case Tile::TileType::FireFighter:
+                    tileChar = 'P';
+                    break;
+                case Tile::TileType::HasVictim:
+                    tileChar = 'V';
+                    break;
+                case Tile::TileType::HasHazard:
+                    tileChar = 'H';
+                    break;
+                case Tile::TileType::Smokey:
+                    tileChar = 'S';
+                    break;
+                default:
+                    tileChar = '?';
+                    break;
+            }
+            mapString += tileChar;
+        }
+        mapString += "\n";
+    }
+    return mapString;
+}
+
+String Map::getRowCharRepresentation(int row)
+{
+    String rowString = "";
+    for (int col = 0; col < Columns; ++col) {
+        char tileChar;
+        switch (tiles[row][col].type) {
+            case Tile::TileType::Path:
+                tileChar = ' ';
+                break;
+            case Tile::TileType::Wall:
+                tileChar = '#';
+                break;
+            case Tile::TileType::Fire:
+                tileChar = 'F';
+                break;
+            case Tile::TileType::FireFighter:
+                tileChar = 'P';
+                break;
+            case Tile::TileType::HasVictim:
+                tileChar = 'V';
+                break;
+            case Tile::TileType::HasHazard:
+                tileChar = 'H';
+                break;
+            case Tile::TileType::Smokey:
+                tileChar = 'S';
+                break;
+            default:
+                tileChar = '?';
+                break;
+        }
+        rowString += tileChar;
+    }
+    return rowString;
 }
