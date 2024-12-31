@@ -4,54 +4,40 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-struct TileUpdate
-    {
-        String Command;
-        int Row;
-        int Column;
-        int OldRow;
-        int OldColumn;
-        String Type;
-        TileUpdate() = default;
-        TileUpdate(int row, int column, String type) : Row(row), Column(column), Type(type) { OldRow = -1; OldColumn = -1; Command = "Tile";}
-        TileUpdate(int oldRow, int oldColumn, int row, int column) : Row(row), Column(column) { Command = "MoveTile";}
-        String ToJson()
-        {
-            StaticJsonDocument<256> doc;
-            doc["Command"] = Command;
-            doc["OldRow"] = OldRow;
-            doc["OldColumn"] = OldColumn;
-            doc["Row"] = Row;
-            doc["Column"] = Column;
-            doc["Type"] = Type;
-            String json;
-            serializeJson(doc, json);
-            return json;
-        }
-    };
-/*struct moveTileUpdate
-{
-    String Command = "MoveTile";
-    int X;
-    int Y;
-    int NewX;
-    int NewY;
+struct TileUpdate {
+    String Command;
+    int Row{0};
+    int Column{0};
+    int OldRow{-1};     // Default to -1 to indicate "not applicable"
+    int OldColumn{-1};  // Default to -1 to indicate "not applicable"
     String Type;
-    moveTileUpdate(int x, int y, int newX, int newY, String type) : X(x), Y(y), NewX(newX), NewY(newY), Type(type) {}
-    String ToJson()
-    {
+
+    // Default constructor
+    TileUpdate() 
+        : Command(""), Row(0), Column(0), OldRow(-1), OldColumn(-1), Type("") {}
+
+    // Constructor for creating a new tile update
+    TileUpdate(int row, int column, const String& type) 
+        : Command("Tile"), Row(row), Column(column), OldRow(-1), OldColumn(-1), Type(type) {}
+
+    // Constructor for moving a tile
+    TileUpdate(int oldRow, int oldColumn, int row, int column, const String& type) 
+        : Command("MoveTile"), Row(row), Column(column), OldRow(oldRow), OldColumn(oldColumn), Type(type) {}
+
+    // Serialize to JSON
+    String ToJson() const {
         StaticJsonDocument<256> doc;
         doc["Command"] = Command;
-        doc["Row"] = X;
-        doc["Column"] = Y;
-        doc["NewRow"] = NewX;
-        doc["NewColumn"] = NewY;
+        doc["OldRow"] = OldRow;
+        doc["OldColumn"] = OldColumn;
+        doc["Row"] = Row;
+        doc["Column"] = Column;
         doc["Type"] = Type;
+        
         String json;
         serializeJson(doc, json);
         return json;
     }
-};*/
+};
 
-
-#endif
+#endif // TILEUPDATE_H

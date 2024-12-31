@@ -25,7 +25,7 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
         }
         else
         {
-            enqueueSerialOutput("Received message from mesh: " + msg);
+            //enqueueSerialOutput("Received message from mesh: " + msg);
             switch(this->stringToCommand(doc["Command"]))
             {
                 case Tile:
@@ -45,6 +45,7 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
     mesh.onChangedConnections([this]() {
     this->enqueueSerialOutput("Mesh message: Changed connection");
     });
+    
 }
     
 void BridgeComms::meshUpdate(void *pvParameters)

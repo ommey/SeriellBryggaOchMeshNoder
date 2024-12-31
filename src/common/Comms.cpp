@@ -65,6 +65,15 @@ Comms::Comms(Scene *scene, FireFighter* fireFighter) : scene(scene), fireFighter
       mesh.onChangedConnections([this]() {
     Serial.printf("Changed connection\n");
     });
+
+    mesh.onDroppedConnection([this](size_t nodeId) {
+        enqueueSerialOutput("Dropped connection: " + String(nodeId));
+        this->fireFighter->reset();
+        this->scene->reset();
+    });
+
+
+
 }
     
 void Comms::meshUpdate(void *pvParameters)

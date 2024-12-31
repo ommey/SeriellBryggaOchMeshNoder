@@ -1,16 +1,13 @@
 #include "FireFighter.h"
 
-FireFighter::FireFighter() : x(0), y(0), fireFighterTaskHandle(nullptr)
-{
-}
+constexpr size_t MSG_CHAR_SIZE = 256;
+constexpr TickType_t QUEUE_SEND_TIMEOUT = 10 / portTICK_PERIOD_MS;
+
+FireFighter::FireFighter() : x(0), y(0), fireFighterTaskHandle(nullptr), serialOutputQueue(nullptr), meshOutPutQueue(nullptr), map(nullptr) {}
 
 FireFighter::~FireFighter()
 {
-    if (fireFighterTaskHandle != NULL)
-    {
-        vTaskDelete(fireFighterTaskHandle);
-        fireFighterTaskHandle = NULL;
-    }
+    reset();
 }
 
 void FireFighter::registerSerialOutput(QueueHandle_t *serialOutputQueue)
@@ -18,25 +15,24 @@ void FireFighter::registerSerialOutput(QueueHandle_t *serialOutputQueue)
     this->serialOutputQueue = serialOutputQueue;
 }
 
-
-
 void FireFighter::registerMeshOutput(QueueHandle_t *meshOutPutQueue)
 {
     this->meshOutPutQueue = meshOutPutQueue;
 }
 
-void FireFighter::registerMap(Map* map)
+void FireFighter::registerMap(Map *map)
 {
     this->map = map;
 }
 
 void FireFighter::start()
 {
-    if(fireFighterTaskHandle == NULL)
+    if (fireFighterTaskHandle == nullptr)
     {
-        if(xTaskCreate(FireFighterTask, "FireFighterTask", 2048, this, 1, &fireFighterTaskHandle) != pdPASS)
+        BaseType_t result = xTaskCreate(FireFighterTask, "FireFighterTask", 2048, this, 1, &fireFighterTaskHandle);
+        if (result != pdPASS)
         {
-            Serial.println("Failed to create FireFighterTask");
+            Serial.printf("Failed to create FireFighterTask, error code: %d\n", result);
         }
     }
     else
@@ -47,18 +43,25 @@ void FireFighter::start()
 
 void FireFighter::reset()
 {
-    if (fireFighterTaskHandle != NULL)
+    if (fireFighterTaskHandle != nullptr)
     {
         vTaskDelete(fireFighterTaskHandle);
-        fireFighterTaskHandle = NULL;
+        fireFighterTaskHandle = nullptr;
     }
 }
 
 void FireFighter::spawnFireFighter()
 {
+    if (map == nullptr)
+    {
+        Serial.println("Map is not registered.");
+        return;
+    }
+
     std::vector<Tile> validSpawnLocations = map->getValidSpawnLocations();
-    if (!validSpawnLocations.empty()) {
-        randomSeed(millis());  
+    if (!validSpawnLocations.empty())
+    {
+        randomSeed(millis());
         int randomIndex = random(0, validSpawnLocations.size());
         Tile randomTile = validSpawnLocations[randomIndex];
         this->x = randomTile.Row;
@@ -67,11 +70,22 @@ void FireFighter::spawnFireFighter()
     }
 }
 
+void FireFighter::moveFireFighter(int newX, int newY)
+{
+}
+
 void FireFighter::moveFireFighter()
 {
+    if (map == nullptr)
+    {
+        Serial.println("Map is not registered.");
+        return;
+    }
+
     std::vector<Tile> validMoveLocations = map->getAdjacentTiles(x, y);
-    if (!validMoveLocations.empty()) {
-        randomSeed(millis());  
+    if (!validMoveLocations.empty())
+    {
+        randomSeed(millis());
         int randomIndex = random(0, validMoveLocations.size());
         Tile randomTile = validMoveLocations[randomIndex];
         moveTile(x, y, randomTile.Row, randomTile.Column);
@@ -79,90 +93,66 @@ void FireFighter::moveFireFighter()
         this->x = randomTile.Row;
         this->y = randomTile.Column;
     }
-    
 }
-
 
 void FireFighter::updateTile(int row, int column, Tile::TileType type)
 {
     TileUpdate tileUpdate(row, column, Tile::typeToString(type));
-    enqueueSerialOutput("sending via mesh " + tileUpdate.ToJson());
-    enqueueMeshOutput(tileUpdate.ToJson());
-   /* TileUpdate tileUpdate(row, column, Tile::typeToString(type), "Tile");
-    enqueueMeshOutput(tileUpdate.ToJson());
-    */
+    String json = tileUpdate.ToJson();
+    enqueueSerialOutput("Sending via mesh: " + json);
+    enqueueMeshOutput(json);
 }
 
 void FireFighter::moveTile(int x, int y, int newX, int newY)
 {
-    TileUpdate tileUpdate(x, y, newX, newY);
-    enqueueSerialOutput("sending via mesh " + tileUpdate.ToJson());
-    enqueueMeshOutput(tileUpdate.ToJson());
-    /*
-    TileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(type), "MoveTile");
-    enqueueMeshOutput(moveTileUpdate.ToJson()); */
-}
-
-void FireFighter::moveFireFighter(int newX, int newY)
-{
-    moveTile(x, y, newX, newY);
-    
-    /*TileUpdate moveTileUpdate(x, y, newX, newY, Tile::typeToString(Tile::TileType::FireFighter), "MoveTile");
-    enqueueMeshOutput(moveTileUpdate.ToJson());*/
-}
-
-void FireFighter::FireFighterTask(void *pvParameters)
-{
-    FireFighter* fireFighter = static_cast<FireFighter*>(pvParameters);
-    while (fireFighter->map->isCreated())
-    {
-        fireFighter->spawnFireFighter();
-        //fireFighter->enqueueSerialOutput("Im working with map: " + String(fireFighter->map->Rows) + ", " + String(fireFighter->map->Columns));
-        while (1)
-        {
-            fireFighter->enqueueSerialOutput("FireFighterTask going strong" + String(millis()));
-            fireFighter->moveFireFighter();
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            
-            
-            
-            
-            /*for (int i = 0; i < fireFighter->map->Rows; i++)
-            {
-                fireFighter->enqueueSerialOutput(fireFighter->map->getRowCharRepresentation(i));
-            }*/
-            
-            
-        }
-                
-         
-                
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
+    TileUpdate tileUpdate(x, y, newX, newY, "FireFighter");
+    String json = tileUpdate.ToJson();
+    enqueueSerialOutput("Sending via mesh: " + json);
+    enqueueMeshOutput(json);
 }
 
 void FireFighter::enqueueSerialOutput(const String &msg)
 {
-    if (msg != "") 
-    {
-        char msgChar[256];
-        msg.toCharArray(msgChar, sizeof(msgChar));
-        if (xQueueSend(*serialOutputQueue, &msgChar, 10) != pdPASS) 
-        {
-            Serial.println("Failed to add to serial queue");
-        }
-    }
+    enqueueOutput(serialOutputQueue, msg);
 }
 
 void FireFighter::enqueueMeshOutput(const String &msg)
 {
-    if (msg != "") 
+    enqueueOutput(meshOutPutQueue, msg);
+}
+
+void FireFighter::enqueueOutput(QueueHandle_t *queue, const String &msg)
+{
+    if (queue != nullptr && !msg.isEmpty())
     {
-        char msgChar[256];
+        char msgChar[MSG_CHAR_SIZE];
         msg.toCharArray(msgChar, sizeof(msgChar));
-        if (xQueueSend(*meshOutPutQueue, &msgChar, 10) != pdPASS) 
+        if (xQueueSend(*queue, &msgChar, QUEUE_SEND_TIMEOUT) != pdPASS)
         {
-            Serial.println("Failed to add to mesh queue");
+            Serial.println("Failed to enqueue message.");
         }
+    }
+}
+
+void FireFighter::FireFighterTask(void *pvParameters)
+{
+    FireFighter *fireFighter = static_cast<FireFighter *>(pvParameters);
+
+    if (fireFighter->map == nullptr || !fireFighter->map->isCreated())
+    {
+        Serial.println("Map is not initialized or not ready.");
+        vTaskDelete(nullptr);
+        return;
+    }
+
+    fireFighter->spawnFireFighter();
+
+    while (true)
+    {
+        //fireFighter->enqueueMeshOutput("my position: " + String(fireFighter->x) + ", " + String(fireFighter->y));
+        fireFighter->enqueueSerialOutput("my position: " + String(fireFighter->x) + ", " + String(fireFighter->y));
+        fireFighter->enqueueSerialOutput("FireFighterTask going strong: " + String(millis()));
+        fireFighter->moveFireFighter();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

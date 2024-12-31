@@ -33,14 +33,13 @@ void registerMap(Map* map);
 void start();
 void reset();
 
+void enqueueOutput(QueueHandle_t* queue, const String& msg);
 void spawnFireFighter();
 void moveFireFighter(int newX, int newY);
 void moveFireFighter();
 
 void updateTile(int x, int y, Tile::TileType type);
 void moveTile(int x, int y, int newX, int newY);
-
-
 
 };
 
