@@ -30,6 +30,8 @@ static void serialReadTask(void* pvParameters);
 public:
     QueueHandle_t serialOutPutQueue;
     QueueHandle_t meshOutputQueue;
+    std::vector<uint32_t> ActiveNodes;
+
 
     enum commandsToReceive{
         NewMap,

@@ -12,7 +12,20 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
     this->enqueueSerialOutput(msg);
     });*/
 
-
+    struct FireFighterUpdate
+    {
+        String COMMAND;
+        String ID;
+        String ToJson()
+        {
+            StaticJsonDocument<256> doc;
+            doc["Command"] = COMMAND;
+            doc["ID"] = ID;
+            String json;
+            serializeJson(doc, json);
+            return json;
+        }
+    };
 
     mesh.onReceive([this](String &from, String &msg) {
     //this->enqueueSerialOutput(msg);
@@ -44,6 +57,24 @@ BridgeComms::BridgeComms(BridgeScene *scene) : scene(scene), serialOutPutQueue(x
 
     mesh.onChangedConnections([this]() {
     this->enqueueSerialOutput("Mesh message: Changed connection");
+    for(auto &node : this->mesh.getNodeList()){
+        if (std::find(this->ActiveNodes.begin(), this->ActiveNodes.end(), node) == this->ActiveNodes.end()) {
+            this->ActiveNodes.push_back(node);
+            FireFighterUpdate fireFighterUpdate;
+            fireFighterUpdate.COMMAND = "RegFF";
+            fireFighterUpdate.ID = node;
+            this->enqueueSerialOutput(fireFighterUpdate.ToJson());
+        }
+    }
+        for(auto fireFighter : this->ActiveNodes){
+            if (std::find(this->mesh.getNodeList().begin(), this->mesh.getNodeList().end(), fireFighter) == this->mesh.getNodeList().end()) {
+                this->ActiveNodes.erase(std::remove(this->ActiveNodes.begin(), this->ActiveNodes.end(), fireFighter), this->ActiveNodes.end());
+                FireFighterUpdate fireFighterUpdate;
+                fireFighterUpdate.COMMAND = "UnRegFF";
+                fireFighterUpdate.ID = fireFighter;
+                this->enqueueSerialOutput(fireFighterUpdate.ToJson());
+            }
+        }
     });
     
 }
