@@ -1,1 +1,1 @@
-FreeRtos, arduino platform, painlessmesh primarily utilized. One esp32 module acts as a bridge that routes wifi simulation data to serial interface. This can be used for render
+This project was created to simulate real life scenarios with the help of iot devices acting as autonomous agents. FreeRtos, arduino platform, painlessmesh primarily utilized. One esp32 module acts as a bridge that routes wifi simulation data to serial interface. This can be used for render.
